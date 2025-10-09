@@ -5,55 +5,37 @@ import {
   OnDestroy,
   HostListener,
 } from '@angular/core';
-import { EmployeeData } from '../../../types/user/profileType/employee-data.type';
-import { LeaveData } from '../../../types/user/profileType/leave-data.type';
-import { ApiService, ProfileData, DashboardData } from '../../../services/api.service';
-import { AuthService } from '../../../services/auth.service';
+import { HttpClient } from '@angular/common/http';
+import { EmployeeProfileData } from '../../../types/user/profileType/employee-profile-data.type';
+import { LeaveBalance } from '../../../../types/leave-balance.model';
+import { DataMapperService } from '../../../../helpers/data-mapper.service';
+
 
 @Component({
-  selector: 'app-user-profile',
+  selector: 'app-employee-profile',
   templateUrl: './user-profile.html',
   styleUrls: ['./user-profile.css'],
   standalone: false,
 })
 export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
-  employeeData: EmployeeData = {
-    id: '',
-    name: '',
-    role: 'employee',
-    department: '',
-    email: '',
-    phone: '',
-    joinDate: '',
-    experience: '',
-    status: '',
-  };
-
-  leaveData: LeaveData = {
-    annual: { total: 0, used: 0, remaining: 0 },
-    sick: { total: 0, used: 0, remaining: 0 },
-    personal: { total: 0, used: 0, remaining: 0 },
-  };
-
-  profileData: ProfileData | null = null;
-  dashboardData: DashboardData | null = null;
-  profileImageUrl: string | null = null;
-  holidays: any[] = [];
+  employeeData!: EmployeeProfileData;
+  leaveBalances: Record<string, LeaveBalance> = {};
   isLoading = true;
-  error: string | null = null;
+  hasError = false;
 
   private autoSaveTimer?: number;
   private clockInterval?: number;
 
-  constructor(
-    private apiService: ApiService,
-    private authService: AuthService
-  ) {}
+  constructor(private http: HttpClient, private mapper: DataMapperService) {}
 
   ngOnInit(): void {
+    this.loadEmployeeProfile();
+    this.loadLeaveBalances();
+
     const w = window as any;
     w.closeModal = this.closeModal.bind(this);
     w.downloadProfile = this.downloadProfile.bind(this);
+    w.changeProfileImage = this.changeProfileImage.bind(this);
     w.viewLeaveDetails = this.viewLeaveDetails.bind(this);
     w.requestLeave = this.requestLeave.bind(this);
     w.sendMessage = this.sendMessage.bind(this);
@@ -64,10 +46,35 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     w.searchEmployee = this.searchEmployee.bind(this);
     w.printProfile = this.printProfile.bind(this);
     w.toggleDarkMode = this.toggleDarkMode.bind(this);
-    w.editProfile = this.editProfile.bind(this);
-    w.saveProfile = this.saveProfile.bind(this);
+  }
 
-    this.loadProfileData();
+  // 🔹 Load employee profile from backend
+  private loadEmployeeProfile(): void {
+    const userId = this.getCurrentUserId();
+    this.http.get(`/api/employee_profiles/${userId}`).subscribe({
+      next: (res: any) => {
+        this.employeeData = this.mapper.fromApi<EmployeeProfileData>(res);
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Failed to load employee profile:', err);
+        this.hasError = true;
+        this.isLoading = false;
+      },
+    });
+  }
+
+  // 🔹 Load leave balances for current employee
+  private loadLeaveBalances(): void {
+    const userId = this.getCurrentUserId();
+    this.http.get(`/api/leave_balances/${userId}`).subscribe({
+      next: (res: any) => {
+        this.leaveBalances = this.mapper.fromApi<Record<string, LeaveBalance>>(res);
+      },
+      error: (err) => {
+        console.error('Failed to load leave balances:', err);
+      },
+    });
   }
 
   ngAfterViewInit(): void {
@@ -80,20 +87,6 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     this.initializeCharts();
     this.updateClock();
     this.clockInterval = window.setInterval(() => this.updateClock(), 1000);
-
-    document.querySelectorAll('.info-item').forEach((item) => {
-      item.addEventListener('mouseenter', (e) => {
-        const el = e.currentTarget as HTMLElement;
-        el.style.transform = 'translateX(5px)';
-      });
-      item.addEventListener('mouseleave', (e) => {
-        const el = e.currentTarget as HTMLElement;
-        el.style.transform = 'translateX(0)';
-      });
-    });
-
-    const editModal = document.getElementById('editModal');
-    editModal?.addEventListener('click', () => this.setupAutoSave());
   }
 
   ngOnDestroy(): void {
@@ -110,22 +103,18 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  editProfile(): void {
-    const modal = document.getElementById('editModal');
-    if (modal) {
-      this.populateEditForm();
-      modal.classList.add('show');
-      this.setupAutoSave();
-    }
+  private getCurrentUserId(): string {
+    return localStorage.getItem('user_id') || '';
   }
 
   closeModal(): void {
-    document.querySelectorAll('.modal').forEach((m) => m.classList.remove('show'));
+    document
+      .querySelectorAll('.modal')
+      .forEach((m) => m.classList.remove('show'));
   }
 
   async downloadProfile(): Promise<void> {
-    this.showNotification('Preparing PDF…');
-
+    this.showNotification('Preparing PDF...');
     try {
       const [{ jsPDF }, html2canvasModule] = await Promise.all([
         import('jspdf'),
@@ -134,91 +123,86 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
       const html2canvas = html2canvasModule.default;
 
       const target = document.getElementById('profilePrintable') || document.body;
-
-      const canvas = await html2canvas(target, {
-        scale: 2,
-        useCORS: true,
-        windowWidth: document.documentElement.scrollWidth,
-        windowHeight: document.documentElement.scrollHeight,
-      });
-
+      const canvas = await html2canvas(target, { scale: 2, useCORS: true });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-
-      const imgWidthPx = canvas.width;
-      const imgHeightPx = canvas.height;
-      const imgRatio = imgWidthPx / imgHeightPx;
-
-      const pdfImgWidth = pageWidth;
-      const pdfImgHeight = pdfImgWidth / imgRatio;
-
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * pageWidth) / canvas.width;
+      let heightLeft = imgHeight;
       let position = 0;
-      let heightLeft = pdfImgHeight;
 
-      pdf.addImage(imgData, 'PNG', 0, position, pdfImgWidth, pdfImgHeight, '', 'FAST');
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, '', 'FAST');
       heightLeft -= pageHeight;
 
       while (heightLeft > 0) {
         pdf.addPage();
         position = heightLeft * -1;
-        pdf.addImage(imgData, 'PNG', 0, position, pdfImgWidth, pdfImgHeight, '', 'FAST');
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, '', 'FAST');
         heightLeft -= pageHeight;
       }
 
-      const safeName = (this.employeeData?.name || 'profile').replace(/\s+/g, '_');
+      const safeName = this.employeeData.fullname.replace(/\s+/g, '_');
       const date = new Date().toISOString().slice(0, 10);
       pdf.save(`${safeName}_Profile_${date}.pdf`);
-
-      this.showNotification('PDF downloaded successfully!');
+      this.showNotification('Profile PDF downloaded!');
     } catch (err) {
       console.error(err);
-      this.showNotification('PDF failed. Falling back to print…');
-      setTimeout(() => window.print(), 150);
+      this.showNotification('PDF failed. Try browser print instead.');
+      setTimeout(() => window.print(), 200);
     }
   }
 
-  viewLeaveDetails(leaveType: 'annual' | 'sick' | 'personal'): void {
-    const leave = this.leaveData[leaveType];
-    const percentage = Number(((leave.used / leave.total) * 100).toFixed(1));
+  changeProfileImage(): void {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev: ProgressEvent<FileReader>) => {
+        const img = document.querySelector('.profile-image') as HTMLImageElement;
+        if (img && ev.target?.result) {
+          img.src = ev.target.result as string;
+          this.showNotification('Profile picture updated!');
+        }
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  }
+
+  viewLeaveDetails(typeKey: string): void {
+    const leave = this.leaveBalances[typeKey];
+    if (!leave) return;
+
+    const total = leave.carryover + leave.used;
+    const remaining = total - leave.used;
+    const percentage = ((leave.used / total) * 100).toFixed(1);
 
     const content = `
       <div class="info-grid">
-        <div class="info-item">
-          <div class="info-label">Leave Type</div>
-          <div class="info-value">${this.capFirst(leaveType)} Leave</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Total Allocated</div>
-          <div class="info-value">${leave.total} days</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Used</div>
-          <div class="info-value">${leave.used} days</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Remaining</div>
-          <div class="info-value">${leave.remaining} days</div>
-        </div>
+        <div class="info-item"><div class="info-label">Type</div><div class="info-value">${typeKey}</div></div>
+        <div class="info-item"><div class="info-label">Used</div><div class="info-value">${leave.used} days</div></div>
+        <div class="info-item"><div class="info-label">Remaining</div><div class="info-value">${remaining} days</div></div>
         <div class="info-item" style="grid-column: 1 / -1;">
-          <div class="info-label">Usage Percentage</div>
-          <div class="progress-bar" style="margin-top: 8px;">
-            <div class="progress-fill" style="width: ${percentage}%"></div>
-          </div>
+          <div class="info-label">Usage</div>
+          <div class="progress-bar"><div class="progress-fill" style="width: ${percentage}%"></div></div>
           <div class="info-value" style="margin-top: 5px;">${percentage}% used</div>
         </div>
-      </div>
-    `;
-
-    const target = document.getElementById('leaveModalContent');
-    if (target) target.innerHTML = content;
-
-    document.getElementById('leaveModal')?.classList.add('show');
+      </div>`;
+    const modal = document.getElementById('leaveModal');
+    const contentEl = document.getElementById('leaveModalContent');
+    if (modal && contentEl) {
+      contentEl.innerHTML = content;
+      modal.classList.add('show');
+    }
   }
 
   requestLeave(): void {
-    this.showNotification('Leave request form opened!');
+    this.showNotification('Opening leave request form...');
   }
 
   sendMessage(): void {
@@ -226,23 +210,32 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
   }
 
   scheduleCall(): void {
-    this.showNotification('Opening calendar to schedule call...');
+    this.showNotification('Opening calendar...');
   }
 
   viewReports(): void {
-    this.showNotification('Loading employee reports...');
+    this.showNotification('Loading reports...');
   }
 
-  filterHolidays(filter: 'all' | 'upcoming' | 'optional' | string, ev?: Event): void {
-    document.querySelectorAll('.filter-tab').forEach((tab) => tab.classList.remove('active'));
-    if (ev && ev.target instanceof HTMLElement) ev.target.classList.add('active');
+  filterHolidays(
+    filter: 'all' | 'upcoming' | 'optional' | string,
+    ev?: Event
+  ): void {
+    document
+      .querySelectorAll('.filter-tab')
+      .forEach((tab) => tab.classList.remove('active'));
+    if (ev && ev.target instanceof HTMLElement)
+      ev.target.classList.add('active');
 
-    const holidays = document.querySelectorAll('.holiday-item') as NodeListOf<HTMLElement>;
+    const holidays = document.querySelectorAll(
+      '.holiday-item'
+    ) as NodeListOf<HTMLElement>;
     holidays.forEach((h) => {
       if (filter === 'all') h.style.display = 'flex';
       else {
         const category = h.getAttribute('data-category');
-        h.style.display = filter === 'upcoming' || category === filter ? 'flex' : 'none';
+        h.style.display =
+          filter === 'upcoming' || category === filter ? 'flex' : 'none';
       }
     });
   }
@@ -251,10 +244,8 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     const notification = document.getElementById('notification');
     const text = document.getElementById('notificationText');
     if (!notification || !text) return;
-
     text.textContent = message;
     notification.classList.add('show');
-
     setTimeout(() => notification.classList.remove('show'), 3000);
   }
 
@@ -273,225 +264,23 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
   }
 
   setupAutoSave(): void {
-    const inputs = document.querySelectorAll('.form-input') as NodeListOf<HTMLInputElement>;
+    const inputs = document.querySelectorAll(
+      '.form-input'
+    ) as NodeListOf<HTMLInputElement>;
     inputs.forEach((input) => {
       input.addEventListener('input', () => {
         if (this.autoSaveTimer) clearTimeout(this.autoSaveTimer);
         this.autoSaveTimer = window.setTimeout(() => {
-          // Auto-save logic here
+          // Optional: API call to save draft
         }, 2000);
       });
     });
   }
 
-  // API Methods
-  loadProfileData(): void {
-    this.isLoading = true;
-    this.error = null;
-
-    Promise.all([
-      this.apiService.getProfile().toPromise(),
-      this.apiService.getDashboardData().toPromise(),
-      this.apiService.getHolidays().toPromise()
-    ]).then(([profileResponse, dashboardResponse, holidaysResponse]) => {
-      if (profileResponse?.success && profileResponse.data) {
-        this.profileData = profileResponse.data;
-        this.updateEmployeeDataFromProfile(profileResponse.data);
-        this.profileImageUrl = profileResponse.data.profilePicture || null;
-      }
-
-      if (dashboardResponse?.success && dashboardResponse.data) {
-        this.dashboardData = dashboardResponse.data;
-        this.updateLeaveDataFromDashboard(dashboardResponse.data);
-        this.updateEmployeeDataFromDashboard(dashboardResponse.data);
-      }
-
-      if (holidaysResponse?.success && holidaysResponse.data) {
-        this.holidays = holidaysResponse.data;
-      }
-
-      this.isLoading = false;
-    }).catch((error: any) => {
-      console.error('Error loading profile data:', error);
-      this.error = 'Failed to load profile data. Please try again.';
-      this.isLoading = false;
-
-      const currentUser = this.authService.getCurrentUser();
-      if (currentUser) {
-        this.employeeData.name = `${currentUser.firstName} ${currentUser.lastName}`;
-        this.employeeData.email = currentUser.email;
-      }
-    });
-  }
-
-  private updateEmployeeDataFromProfile(profile: ProfileData): void {
-    this.employeeData.name = `${profile.firstName} ${profile.lastName}`;
-    this.employeeData.email = profile.email;
-    this.employeeData.phone = profile.phone;
-    this.employeeData.department = profile.department;
-    
-    if (profile.joinDate) {
-      this.employeeData.joinDate = new Date(profile.joinDate).toLocaleDateString();
-    }
-    this.employeeData.experience = profile.workExperience || '0 Years';
-  }
-
-  private updateEmployeeDataFromDashboard(dashboard: DashboardData): void {
-    if (dashboard.employeeInfo) {
-      this.employeeData.department = dashboard.employeeInfo.department || this.employeeData.department;
-      this.employeeData.experience = dashboard.employeeInfo.workExperience || this.employeeData.experience;
-      if (dashboard.employeeInfo.joinDate) {
-        this.employeeData.joinDate = new Date(dashboard.employeeInfo.joinDate).toLocaleDateString();
-      }
-    }
-
-    if (dashboard.contactInfo) {
-      this.employeeData.phone = dashboard.contactInfo.phone || this.employeeData.phone;
-    }
-  }
-
-  private updateLeaveDataFromDashboard(dashboard: DashboardData): void {
-    if (dashboard.leaveBalance) {
-      this.leaveData = {
-        annual: {
-          total: dashboard.leaveBalance.annual?.total || 0,
-          used: dashboard.leaveBalance.annual?.used || 0,
-          remaining: dashboard.leaveBalance.annual?.remaining || 0,
-        },
-        sick: {
-          total: dashboard.leaveBalance.sick?.total || 0,
-          used: dashboard.leaveBalance.sick?.used || 0,
-          remaining: dashboard.leaveBalance.sick?.remaining || 0,
-        },
-        personal: {
-          total: dashboard.leaveBalance.personal?.total || 0,
-          used: dashboard.leaveBalance.personal?.used || 0,
-          remaining: dashboard.leaveBalance.personal?.remaining || 0,
-        },
-      };
-    }
-  }
-
-  private populateEditForm(): void {
-    if (!this.profileData) return;
-
-    const fields = {
-      'edit-firstName': this.profileData.firstName,
-      'edit-lastName': this.profileData.lastName,
-      'edit-phone': this.profileData.phone,
-      'edit-emergencyContact': this.profileData.emergencyContact,
-      'edit-address': this.profileData.currentAddress,
-      'edit-department': this.profileData.department,
-      'edit-designation': this.profileData.designation,
-    };
-
-    Object.entries(fields).forEach(([id, value]) => {
-      const element = document.getElementById(id) as HTMLInputElement;
-      if (element && value) {
-        element.value = value;
-      }
-    });
-  }
-
-  saveProfile(): void {
-    if (!this.profileData) {
-      this.showNotification('No profile data to save');
-      return;
-    }
-
-    const formData = this.getFormData();
-    if (!formData) {
-      this.showNotification('Error reading form data');
-      return;
-    }
-
-    this.apiService.updateProfile(formData).subscribe({
-      next: (response: any) => {
-        if (response.success) {
-          this.showNotification('Profile updated successfully!');
-          if (this.profileData && formData) {
-            this.profileData = { ...this.profileData, ...formData } as ProfileData;
-            this.updateEmployeeDataFromProfile(this.profileData);
-          }
-          this.closeModal();
-        } else {
-          this.showNotification('Failed to update profile');
-        }
-      },
-      error: (error: any) => {
-        console.error('Error saving profile:', error);
-        this.showNotification('Error saving profile. Please try again.');
-      }
-    });
-  }
-
-  private getFormData(): Partial<ProfileData> | null {
-    const getFieldValue = (id: string): string => {
-      const element = document.getElementById(id) as HTMLInputElement;
-      return element?.value || '';
-    };
-
-    return {
-      firstName: getFieldValue('edit-firstName'),
-      lastName: getFieldValue('edit-lastName'),
-      phone: getFieldValue('edit-phone'),
-      emergencyContact: getFieldValue('edit-emergencyContact'),
-      currentAddress: getFieldValue('edit-address'),
-      department: getFieldValue('edit-department'),
-      designation: getFieldValue('edit-designation'),
-    };
-  }
-
-  refreshProfile(): void {
-    this.loadProfileData();
-  }
-
-  updateClock(): void {
-    // Clock update logic
-  }
-
-  initializeCharts(): void {
-    // Charts initialization
-  }
+  updateClock(): void {}
+  initializeCharts(): void {}
 
   private capFirst(s: string): string {
     return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
-  }
-
-  getLeavePercentage(leaveType: 'annual' | 'sick' | 'personal'): number {
-    const leave = this.leaveData[leaveType];
-    if (leave.total === 0) return 0;
-    return Math.round((leave.used / leave.total) * 100);
-  }
-
-  formatDate(dateString: string | undefined): string {
-    if (!dateString) return 'N/A';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-    } catch (error) {
-      return 'Invalid Date';
-    }
-  }
-
-  getDaysUntilHoliday(holidayDate: string): string {
-    if (!holidayDate) return '';
-    try {
-      const today = new Date();
-      const holiday = new Date(holidayDate);
-      const diffTime = holiday.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (diffDays < 0) return 'Past';
-      if (diffDays === 0) return 'Today';
-      if (diffDays === 1) return '1 day';
-      return `${diffDays} days`;
-    } catch (error) {
-      return '';
-    }
   }
 }

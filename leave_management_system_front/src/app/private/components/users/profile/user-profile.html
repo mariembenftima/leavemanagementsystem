@@ -1,248 +1,254 @@
-...existing code...
 <app-user-nav-bar></app-user-nav-bar>
 
-<div class="profile-main">
-  <div class="left-panel">
-    <div class="profile-card">
-      <div class="profile-header">
-        <div>
-          <div class="profile-name">
-            {{employeeData.name || 'Unknown User'}}
-          </div>
-          <div class="profile-role">
-            {{profileData?.designation || employeeData.role || 'Employee'}}
-          </div>
-          <div class="profile-id">
-            {{profileData?.employeeId || employeeData.id || 'N/A'}}
-          </div>
-        </div>
-        <div class="status-indicator" [title]="employeeData.status + ' Employee'"></div>
-      </div>
-      
-      <div class="stats-row">
-        <div class="stat-item">
-          <div class="stat-value">{{profileData?.workExperience || employeeData.experience || '0'}}</div>
-          <div class="stat-label">Years Experience</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value">{{employeeData.department || 'N/A'}}</div>
-          <div class="stat-label">Department</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-value">{{employeeData.status || 'N/A'}}</div>
-          <div class="stat-label">Status</div>
-        </div>
-      </div>
-      
-      <div class="quick-actions">
-        <button class="quick-btn" (click)="sendMessage()">
-          <i class="fas fa-message"></i> Message
-        </button>
-        <button class="quick-btn" (click)="scheduleCall()">
-          <i class="fas fa-phone"></i> Call
-        </button>
-        <button class="quick-btn" (click)="viewReports()">
-          <i class="fas fa-chart-line"></i> Reports
-        </button>
-      </div>
-    </div>
+<div class="app-shell">
+  <div class="shell-content">
+    <app-user-side-bar></app-user-side-bar>
 
-    <div class="leave-summary">
-      <h3 class="section-title">
-        <i class="fas fa-calendar-alt"></i>
-        Leave Balance
-      </h3>
-      <div class="leave-items">
-        <div class="leave-item" (click)="viewLeaveDetails('annual')">
-          <div class="leave-header">
-            <span class="leave-type">Annual Leave</span>
-            <div class="leave-numbers">
-              <span class="leave-badge badge-total">{{leaveData.annual.total}}</span>
-              <span class="leave-badge badge-used">{{leaveData.annual.used}}</span>
-              <span class="leave-badge badge-remaining">{{leaveData.annual.remaining}}</span>
+    <div class="page-content">
+      <div class="container" *ngIf="!isLoading && !hasError; else loadingOrError">
+        <div class="header">
+          <h1><i class="fas fa-user-circle"></i> Employee Profile</h1>
+          <div class="action-buttons">
+            <button class="btn btn-secondary" (click)="downloadProfile()">
+              <i class="fas fa-download"></i> Download PDF
+            </button>
+          </div>
+        </div>
+
+        <div class="profile-main" *ngIf="employeeData">
+          <!-- LEFT PANEL -->
+          <div class="left-panel">
+            <div id="profilePrintable">
+              <div class="profile-card">
+                <div class="profile-image-container">
+                  <img
+                    [src]="employeeData.profilePictureUrl || 'assets/user.png'"
+                    alt="Profile"
+                    class="profile-image"
+                    (click)="changeProfileImage()"
+                  />
+                  <div
+                    class="status-indicator"
+                    [title]="employeeData.isActive ? 'Active Employee' : 'Inactive'"
+                  ></div>
+                </div>
+
+                <div class="profile-name">{{ employeeData.fullname }}</div>
+                <div class="profile-role text-uppercase">
+                  {{ employeeData.roles }}
+                </div>
+                <div class="profile-id">{{ employeeData.employeeId }}</div>
+
+                <div class="stats-grid">
+                  <div class="stat-item">
+                    <div class="stat-value">
+                      {{
+                        (new Date().getFullYear() -
+                          (employeeData.joinDate | date: 'yyyy')) || 0
+                      }}
+                    </div>
+                    <div class="stat-label">Years Experience</div>
+                  </div>
+                </div>
+
+                <div class="quick-actions">
+                  <button class="quick-btn" (click)="sendMessage()">
+                    <i class="fas fa-message"></i> Message
+                  </button>
+                  <button class="quick-btn" (click)="scheduleCall()">
+                    <i class="fas fa-phone"></i> Call
+                  </button>
+                  <button class="quick-btn" (click)="viewReports()">
+                    <i class="fas fa-chart-line"></i> Reports
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- LEAVE BALANCE -->
+            <div class="leave-summary" *ngIf="leaveBalances">
+              <h3 class="section-title">
+                <i class="fas fa-calendar-alt"></i>
+                Leave Balance
+              </h3>
+
+              <div class="leave-items">
+                <div
+                  class="leave-item"
+                  *ngFor="let key of (leaveBalances | keyvalue)"
+                  (click)="viewLeaveDetails(key.key)"
+                >
+                  <div class="leave-header">
+                    <span class="leave-type text-capitalize">{{ key.key }} Leave</span>
+                    <div class="leave-numbers">
+                      <span class="leave-badge badge-used">
+                        Used: {{ key.value.used }}
+                      </span>
+                      <span class="leave-badge badge-remaining">
+                        Remaining:
+                        {{
+                          (key.value.carryover + key.value.used) - key.value.used
+                        }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="progress-bar">
+                    <div
+                      class="progress-fill"
+                      [style.width]="
+                        (key.value.used /
+                          (key.value.carryover + key.value.used || 1)) * 100 + '%'
+                      "
+                    ></div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="progress-bar">
-            <div class="progress-fill" [style.width.%]="getLeavePercentage('annual')"></div>
-          </div>
-        </div>
 
-        <div class="leave-item" (click)="viewLeaveDetails('sick')">
-          <div class="leave-header">
-            <span class="leave-type">Sick Leave</span>
-            <div class="leave-numbers">
-              <span class="leave-badge badge-total">{{leaveData.sick.total}}</span>
-              <span class="leave-badge badge-used">{{leaveData.sick.used}}</span>
-              <span class="leave-badge badge-remaining">{{leaveData.sick.remaining}}</span>
+          <!-- RIGHT PANEL -->
+          <div class="right-panel">
+            <!-- Employee Information -->
+            <div class="info-card">
+              <h3 class="section-title">
+                <i class="fas fa-id-card"></i>
+                Employee Information
+              </h3>
+              <div class="info-grid">
+                <div class="info-item">
+                  <div class="info-label">Department</div>
+                  <div class="info-value">{{ employeeData.department }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Designation</div>
+                  <div class="info-value">{{ employeeData.designation }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Join Date</div>
+                  <div class="info-value">
+                    {{ employeeData.joinDate | date: 'longDate' }}
+                  </div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Gender</div>
+                  <div class="info-value">{{ employeeData.gender }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Nationality</div>
+                  <div class="info-value">{{ employeeData.nationality }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Marital Status</div>
+                  <div class="info-value">{{ employeeData.maritalStatus }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="info-card">
+              <h3 class="section-title">
+                <i class="fas fa-address-book"></i>
+                Contact Information
+              </h3>
+              <div class="info-grid">
+                <div class="info-item">
+                  <div class="info-label">Email</div>
+                  <a [href]="'mailto:' + employeeData.email" class="contact-info">
+                    <i class="fas fa-envelope"></i>
+                    {{ employeeData.email }}
+                  </a>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Phone</div>
+                  <a [href]="'tel:' + employeeData.phone" class="contact-info">
+                    <i class="fas fa-phone"></i>
+                    {{ employeeData.phone }}
+                  </a>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Emergency Contact</div>
+                  <a
+                    [href]="'tel:' + employeeData.emergencyContactPhone"
+                    class="contact-info"
+                  >
+                    <i class="fas fa-phone-alt"></i>
+                    {{ employeeData.emergencyContactPhone }}
+                  </a>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Current Address</div>
+                  <div class="info-value">{{ employeeData.address }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="info-card">
+              <h3 class="section-title">
+                <i class="fas fa-history"></i>
+                Recent Activity
+              </h3>
+              <div class="timeline-section" *ngIf="employeeData">
+                <div class="timeline">
+                  <div class="timeline-item">
+                    <div class="timeline-date">
+                      {{ employeeData.updatedAt | date: 'mediumDate' }}
+                    </div>
+                    <div class="timeline-event">
+                      Profile updated or reviewed
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Upcoming Holidays -->
+            <div class="holidays-card">
+              <h3 class="section-title">
+                <i class="fas fa-calendar-check"></i>
+                Upcoming Holidays
+              </h3>
+
+              <div class="filter-tabs">
+                <button class="filter-tab active" (click)="filterHolidays('all')">
+                  All
+                </button>
+                <button class="filter-tab" (click)="filterHolidays('upcoming')">
+                  Upcoming
+                </button>
+                <button class="filter-tab" (click)="filterHolidays('optional')">
+                  Optional
+                </button>
+                <button class="filter-tab" (click)="filterHolidays('national')">
+                  National
+                </button>
+              </div>
+
+              <div class="holidays-list">
+                <div
+                  class="holiday-item"
+                  *ngFor="let h of holidaysList"
+                  [attr.data-category]="h.type"
+                >
+                  <span class="holiday-emoji">🎉</span>
+                  <div class="holiday-info">
+                    <div class="holiday-name">{{ h.name }}</div>
+                    <div class="holiday-date">{{ h.date | date: 'longDate' }}</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="progress-bar">
-            <div class="progress-fill" [style.width.%]="getLeavePercentage('sick')"></div>
-          </div>
-        </div>
-
-        <div class="leave-item" (click)="viewLeaveDetails('personal')">
-          <div class="leave-header">
-            <span class="leave-type">Personal Leave</span>
-            <div class="leave-numbers">
-              <span class="leave-badge badge-total">{{leaveData.personal.total}}</span>
-              <span class="leave-badge badge-used">{{leaveData.personal.used}}</span>
-              <span class="leave-badge badge-remaining">{{leaveData.personal.remaining}}</span>
-            </div>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" [style.width.%]="getLeavePercentage('personal')"></div>
-          </div>
         </div>
       </div>
+
+      <!-- Loading/Error -->
+      <ng-template #loadingOrError>
+        <div class="loading" *ngIf="isLoading">Loading profile...</div>
+        <div class="error" *ngIf="hasError">
+          Failed to load employee data. Please try again later.
+        </div>
+      </ng-template>
     </div>
-  </div>
-
-  <div class="right-panel">
-    <div class="info-card">
-      <h3 class="section-title">
-        <i class="fas fa-id-card"></i>
-        Employee Information
-      </h3>
-      <div class="info-grid">
-        <div class="info-item">
-          <div class="info-label">Department</div>
-          <div class="info-value">{{profileData?.department || dashboardData?.employeeInfo?.department || 'N/A'}}</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Join Date</div>
-          <div class="info-value">{{formatDate(profileData?.joinDate || dashboardData?.employeeInfo?.joinDate) || 'N/A'}}</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Employee ID</div>
-          <div class="info-value">{{profileData?.employeeId || dashboardData?.employeeInfo?.employeeId || 'N/A'}}</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Work Experience</div>
-          <div class="info-value">{{profileData?.workExperience || dashboardData?.employeeInfo?.workExperience || 'N/A'}}</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Gender</div>
-          <div class="info-value">{{profileData?.gender || dashboardData?.employeeInfo?.gender || 'N/A'}}</div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Designation</div>
-          <div class="info-value">{{profileData?.designation || dashboardData?.employeeInfo?.designation || 'N/A'}}</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="info-card">
-      <h3 class="section-title">
-        <i class="fas fa-address-book"></i>
-        Contact Information
-      </h3>
-      <div class="info-grid">
-        <div class="info-item">
-          <div class="info-label">Email</div>
-          <a class="contact-info" [href]="'mailto:' + (profileData?.email || dashboardData?.contactInfo?.email || '')">
-            <i class="fas fa-envelope"></i>
-            {{profileData?.email || dashboardData?.contactInfo?.email || 'N/A'}}
-          </a>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Phone</div>
-          <a [href]="'tel:' + (profileData?.phone || dashboardData?.contactInfo?.phone || '')" class="contact-info">
-            <i class="fas fa-phone"></i>
-            {{profileData?.phone || dashboardData?.contactInfo?.phone || 'N/A'}}
-          </a>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Emergency Contact</div>
-          <a [href]="'tel:' + (profileData?.emergencyContact || dashboardData?.contactInfo?.emergencyContact || '')" class="contact-info">
-            <i class="fas fa-phone-alt"></i>
-            {{profileData?.emergencyContact || dashboardData?.contactInfo?.emergencyContact || 'N/A'}}
-          </a>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Current Address</div>
-          <div class="info-value">{{profileData?.currentAddress || dashboardData?.contactInfo?.currentAddress || 'N/A'}}</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="info-card">
-      <h3 class="section-title">
-        <i class="fas fa-history"></i>
-        Recent Activity
-      </h3>
-      <div class="timeline-section">
-        <div class="timeline">
-          <div *ngIf="dashboardData?.recentActivities?.length === 0 || !dashboardData?.recentActivities" class="no-activities">
-            <p>No recent activities found</p>
-          </div>
-          <div *ngFor="let activity of dashboardData?.recentActivities" class="timeline-item">
-            <div class="timeline-date">{{formatDate(activity.date)}}</div>
-            <div class="timeline-event">
-              {{activity.description}}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="holidays-card">
-      <h3 class="section-title">
-        <i class="fas fa-calendar-check"></i>
-        Upcoming Holidays
-      </h3>
-
-      <div class="filter-tabs">
-        <button
-          class="filter-tab active"
-          (click)="filterHolidays('all')"
-        >
-          All
-        </button>
-        <button class="filter-tab" (click)="filterHolidays('upcoming')">
-          Upcoming
-        </button>
-        <button class="filter-tab" (click)="filterHolidays('optional')">
-          Optional
-        </button>
-        <button class="filter-tab" (click)="filterHolidays('national')">
-          National
-        </button>
-      </div>
-
-      <div class="holidays-list">
-        <div *ngIf="holidays?.length === 0 || !holidays" class="no-holidays">
-          <p>No holidays found</p>
-        </div>
-        <div *ngFor="let holiday of holidays" class="holiday-item" [attr.data-category]="holiday.type || 'national'">
-          <span class="holiday-emoji">{{holiday.emoji || '🎉'}}</span>
-          <div class="holiday-info">
-            <div class="holiday-name">{{holiday.name}}</div>
-            <div class="holiday-date">{{formatDate(holiday.date)}}</div>
-          </div>
-          <span class="holiday-days-left">{{getDaysUntilHoliday(holiday.date)}}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Loading State -->
-<div *ngIf="isLoading" class="loading-container">
-  <div class="loading-spinner">
-    <div class="loading"></div>
-    <p>Loading profile data...</p>
-  </div>
-</div>
-
-<!-- Error State -->
-<div *ngIf="error && !isLoading" class="error-container">
-  <div class="error-message">
-    <i class="fas fa-exclamation-triangle"></i>
-    <h3>Error Loading Profile</h3>
-    <p>{{error}}</p>
-    <button class="btn btn-primary" (click)="loadProfileData()">
-      <i class="fas fa-refresh"></i> Retry
-    </button>
   </div>
 </div>

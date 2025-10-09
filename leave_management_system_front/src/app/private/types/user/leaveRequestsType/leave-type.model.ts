@@ -1,6 +1,6 @@
 export interface LeaveType {
-  value: string;
-  label: string;
-  maxDays: number;
-  color: string;
+  id: string;
+  name: string;
+  max_days: number;
+  color?: string; // for UI display
 }

@@ -1,27 +1,27 @@
 import { LeaveType } from './leave-type.model';
 
 export const LEAVE_TYPES: LeaveType[] = [
-  { value: 'annual', label: 'Annual Leave', maxDays: 24, color: '#10b981' },
-  { value: 'sick', label: 'Sick Leave', maxDays: 10, color: '#8b5cf6' },
-  { value: 'personal', label: 'Personal Leave', maxDays: 5, color: '#f59e0b' },
+  { id: 'annual', name: 'Annual Leave', max_days: 24, color: '#10b981' },
+  { id: 'sick', name: 'Sick Leave', max_days: 10, color: '#8b5cf6' },
+  { id: 'personal', name: 'Personal Leave', max_days: 5, color: '#f59e0b' },
   {
-    value: 'maternity',
-    label: 'Maternity Leave',
-    maxDays: 180,
+    id: 'maternity',
+    name: 'Maternity Leave',
+    max_days: 180,
     color: '#ec4899',
   },
   {
-    value: 'paternity',
-    label: 'Paternity Leave',
-    maxDays: 15,
+    id: 'paternity',
+    name: 'Paternity Leave',
+    max_days: 15,
     color: '#3b82f6',
   },
   {
-    value: 'emergency',
-    label: 'Emergency Leave',
-    maxDays: 3,
+    id: 'emergency',
+    name: 'Emergency Leave',
+    max_days: 3,
     color: '#ef4444',
   },
 
-  { value: 'half-day', label: 'Half Day', maxDays: 1, color: '#f59e0b' },
+  { id: 'half-day', name: 'Half Day', max_days: 1, color: '#f59e0b' },
 ];

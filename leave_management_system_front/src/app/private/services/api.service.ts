@@ -10,20 +10,21 @@ export interface ApiResponse<T> {
 }
 
 export interface ProfileData {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  department: string;
-  designation: string;
-  joinDate: string;
-  workExperience: string;
-  gender: string;
-  emergencyContact: string;
-  currentAddress: string;
-  profilePicture?: string;
-  employeeId: string;
+  
+  id: string;                     // users.id
+  username: string;               // users.username
+  fullname: string;               // users.fullname
+  email: string;                  // users.email
+  phone_number: string;           // users.phone_number
+  address: string;                // users.address
+  date_of_birth: string;          // users.date_of_birth
+  team_id: string;                // users.team_id
+  profile_picture_url?: string;   // users.profile_picture_url
+  roles?: string;                 // users.roles
+  is_active?: boolean;            // users.is_active
+  created_at?: string;            // users.created_at
+  updated_at?: string;            // users.updated_at
+
 }
 
 export interface DashboardData {
@@ -43,10 +44,12 @@ export interface DashboardData {
     currentAddress: string;
   };
   leaveBalance: {
-    annual: { total: number; used: number; remaining: number };
-    sick: { total: number; used: number; remaining: number };
-    personal: { total: number; used: number; remaining: number };
-    emergency: { total: number; used: number; remaining: number };
+  id: string;             // leave_balances.id
+  user_id: string;        // leave_balances.user_id
+  leave_type_id: string;  // leave_balances.leave_type_id
+  year: number;           // leave_balances.year
+  carryover: number;      // leave_balances.carryover
+  used: number;           // leave_balances.used
   };
   recentActivities: Array<{
     id: string;
@@ -76,11 +79,9 @@ export interface LeaveRequest {
 }
 
 export interface LeaveType {
-  id: string;
-  name: string;
-  maxDays: number;
-  description?: string;
-  color?: string;
+   id: string;             // leave_types.id
+  name: string;           // leave_types.name
+  max_days: number;       // leave_types.max_days
 }
 
 @Injectable({
