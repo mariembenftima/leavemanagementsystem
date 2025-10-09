@@ -1,54 +1,61 @@
 import { Injectable } from '@angular/core';
-import { CanActivate, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+import {
+  CanActivate,
+  Router,
+  ActivatedRouteSnapshot,
+  RouterStateSnapshot,
+  UrlTree,
+} from '@angular/router';
+import { Observable } from 'rxjs';
 import { AuthService } from '../private/services/auth.service';
 
+
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthGuard implements CanActivate {
-  constructor(
-    private authService: AuthService,
-    private router: Router
-  ) {}
+  constructor(private auth: AuthService, private router: Router) {}
 
   canActivate(
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
-  ): boolean {
-    if (!this.authService.isLoggedIn()) {
-      this.router.navigate(['/login']);
-      return false;
+  ): boolean | UrlTree | Observable<boolean | UrlTree> | Promise<boolean | UrlTree> {
+    if (this.auth.isLoggedIn()) {
+      return true;
     }
-    return true;
+
+    // If not logged in → redirect to login
+    return this.router.createUrlTree(['/login'], {
+      queryParams: { returnUrl: state.url },
+    });
   }
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class RoleGuard implements CanActivate {
-  constructor(
-    private authService: AuthService,
-    private router: Router
-  ) {}
+  constructor(private auth: AuthService, private router: Router) {}
 
   canActivate(
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
-  ): boolean {
-    if (!this.authService.isLoggedIn()) {
-      this.router.navigate(['/login']);
-      return false;
+  ): boolean | UrlTree | Observable<boolean | UrlTree> | Promise<boolean | UrlTree> {
+    // 1️⃣ Check login first
+    if (!this.auth.isLoggedIn()) {
+      return this.router.createUrlTree(['/login'], {
+        queryParams: { returnUrl: state.url },
+      });
     }
 
-    const allowedRoles = route.data['roles'] as Array<string>;
+    // 2️⃣ Check allowed roles from route metadata
+    const allowedRoles = route.data['roles'] as string[] | undefined;
+
     if (allowedRoles && allowedRoles.length > 0) {
-      const hasRequiredRole = allowedRoles.some(role => this.authService.hasRole(role));
-      if (!hasRequiredRole) {
-        // Redirect to unauthorized page or dashboard
-        console.log('hasRequiredRole', hasRequiredRole);
-        this.router.navigate(['/dashboard']);
-        return false;
+      const hasRole = allowedRoles.some((r) => this.auth.hasRole(r));
+      if (!hasRole) {
+        console.warn('Access denied. Missing required role(s):', allowedRoles);
+        return this.router.createUrlTree(['/dashboard']); // or /unauthorized
       }
     }
 

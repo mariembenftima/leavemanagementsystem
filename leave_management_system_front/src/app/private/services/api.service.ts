@@ -1,241 +1,140 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { count, firstValueFrom, map, Observable } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { DataMapperService } from '../../helpers/data-mapper.service';
+import { EmployeeProfileData } from '../types/user/profileType/employee-profile-data.type';
+import { DashboardData } from '../../types/dashboard-data.type';
+import { LeaveType } from '../types/user/leaveRequestsType/leave-type.model';
+import { LeaveRequest } from '../types/user/leaveRequestsType/leave-request.model';
+import { Holiday } from '../../types/holiday.model';
+import { User } from '../../types/user.model';
+import { ApiResponse } from '../../types/api-response.type';
 
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  message?: string;
-}
-
-export interface ProfileData {
-  
-  id: string;                     // users.id
-  username: string;               // users.username
-  fullname: string;               // users.fullname
-  email: string;                  // users.email
-  phone_number: string;           // users.phone_number
-  address: string;                // users.address
-  date_of_birth: string;          // users.date_of_birth
-  team_id: string;                // users.team_id
-  profile_picture_url?: string;   // users.profile_picture_url
-  roles?: string;                 // users.roles
-  is_active?: boolean;            // users.is_active
-  created_at?: string;            // users.created_at
-  updated_at?: string;            // users.updated_at
-
-}
-
-export interface DashboardData {
-  employeeInfo: {
-    department: string;
-    designation: string;
-    joinDate: string;
-    employeeId: string;
-    workExperience: string;
-    gender: string;
-    idProof: string;
-  };
-  contactInfo: {
-    email: string;
-    phone: string;
-    emergencyContact: string;
-    currentAddress: string;
-  };
-  leaveBalance: {
-  id: string;             // leave_balances.id
-  user_id: string;        // leave_balances.user_id
-  leave_type_id: string;  // leave_balances.leave_type_id
-  year: number;           // leave_balances.year
-  carryover: number;      // leave_balances.carryover
-  used: number;           // leave_balances.used
-  };
-  recentActivities: Array<{
-    id: string;
-    type: string;
-    description: string;
-    date: string;
-    status: string;
-  }>;
-  performance: {
-    attendanceRate: number;
-    performanceScore: number;
-    projectsCompleted: number;
-    activeProjects: number;
-  };
-}
-
-export interface LeaveRequest {
-  id?: string;
-  leaveTypeId: string;
-  startDate: string;
-  endDate: string;
-  reason: string;
-  status?: string;
-  attachments?: File[];
-  isHalfDay: boolean;
-  halfDayPeriod?: 'morning' | 'afternoon';
-}
-
-export interface LeaveType {
-   id: string;             // leave_types.id
-  name: string;           // leave_types.name
-  max_days: number;       // leave_types.max_days
-}
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ApiService {
   private apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private mapper: DataMapperService) {}
 
-  private getHeaders(): HttpHeaders {
-    const token = localStorage.getItem('authToken');
-    return new HttpHeaders({
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
-    });
+  // 🔹 Profile APIs
+  getProfile(userId?: string): Observable<EmployeeProfileData> {
+    const url = userId
+      ? `${this.apiUrl}/profile/${userId}`
+      : `${this.apiUrl}/profile/me`;
+
+    return this.http.get<ApiResponse<EmployeeProfileData>>(url).pipe(
+      map((res) => this.mapper.fromApi<EmployeeProfileData>(res.data))
+    );
   }
 
-  // Authentication APIs
-  async register(userData: any): Promise<any> {
-    try {
-      const response = await this.http.post(`${this.apiUrl}/auth/register`, userData).toPromise();
-      return response;
-    } catch (error) {
-      throw error;
-    }
+  updateProfile(
+    profileData: Partial<EmployeeProfileData>
+  ): Observable<EmployeeProfileData> {
+    return this.http
+      .put<ApiResponse<EmployeeProfileData>>(
+        `${this.apiUrl}/profile`,
+        this.mapper.toApi(profileData)
+      )
+      .pipe(map((res) => this.mapper.fromApi<EmployeeProfileData>(res.data)));
   }
 
-  async registerWithFile(formData: FormData): Promise<any> {
-    try {
-      const response = await this.http.post(`${this.apiUrl}/auth/register`, formData).toPromise();
-      return response;
-    } catch (error) {
-      throw error;
-    }
+  // 🔹 Dashboard APIs
+  getDashboardData(): Observable<DashboardData> {
+    return this.http
+      .get<ApiResponse<DashboardData>>(`${this.apiUrl}/profile/dashboard`)
+      .pipe(map((res) => this.mapper.fromApi<DashboardData>(res.data)));
   }
 
-  async login(credentials: { email: string; password: string }): Promise<any> {
-    try {
-      const response = await this.http.post(`${this.apiUrl}/auth/login`, credentials).toPromise();
-      return response;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  // Profile APIs
-  getProfile(userId?: string): Observable<ApiResponse<ProfileData>> {
-    const url = userId ? `${this.apiUrl}/profile/${userId}` : `${this.apiUrl}/profile/me`;
-    return this.http.get<ApiResponse<ProfileData>>(url, { headers: this.getHeaders() });
-  }
-
-  updateProfile(profileData: Partial<ProfileData>): Observable<ApiResponse<ProfileData>> {
-    return this.http.put<ApiResponse<ProfileData>>(`${this.apiUrl}/profile`, profileData, { headers: this.getHeaders() });
-  }
-
-  // Dashboard APIs
-  getDashboardData(): Observable<ApiResponse<DashboardData>> {
-    return this.http.get<ApiResponse<DashboardData>>(`${this.apiUrl}/profile/dashboard`, { headers: this.getHeaders() });
-  }
-
-  // Leave APIs
-  getLeaveTypes(): Observable<ApiResponse<LeaveType[]>> {
-    return this.http.get<ApiResponse<LeaveType[]>>(`${this.apiUrl}/leave-types`, { headers: this.getHeaders() });
+  // 🔹 Leave APIs
+  getLeaveTypes(): Observable<LeaveType[]> {
+    return this.http
+      .get<ApiResponse<LeaveType[]>>(`${this.apiUrl}/leave-types`)
+      .pipe(map((res) => this.mapper.fromApiArray<LeaveType>(res.data)));
   }
 
   submitLeaveRequest(leaveRequest: LeaveRequest): Observable<ApiResponse<any>> {
     const formData = new FormData();
-    
-    formData.append('leaveTypeId', leaveRequest.leaveTypeId);
-    formData.append('startDate', leaveRequest.startDate);
-    formData.append('endDate', leaveRequest.endDate);
+    formData.append('leaveTypeId', leaveRequest.leave_type_id);
+    formData.append('startDate', leaveRequest.start_date);
+    formData.append('endDate', leaveRequest.end_date);
     formData.append('reason', leaveRequest.reason);
-    formData.append('isHalfDay', leaveRequest.isHalfDay.toString());
-    
-    if (leaveRequest.halfDayPeriod) {
-      formData.append('halfDayPeriod', leaveRequest.halfDayPeriod);
+    formData.append('isHalfday', String(leaveRequest.is_half_day));
+
+
+
+    if (leaveRequest.attachments?.length) {
+      leaveRequest.attachments.forEach((file) =>
+        formData.append('attachments', file)
+      );
     }
 
-    if (leaveRequest.attachments) {
-      leaveRequest.attachments.forEach((file, index) => {
-        formData.append(`attachments`, file);
-      });
-    }
-
-    const headers = new HttpHeaders({
-      ...(localStorage.getItem('authToken') && { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` })
-    });
-
-    return this.http.post<ApiResponse<any>>(`${this.apiUrl}/leave-requests`, formData, { headers });
+    return this.http.post<ApiResponse<any>>(
+      `${this.apiUrl}/leave-requests`,
+      formData
+    );
   }
 
-  getMyLeaveRequests(): Observable<ApiResponse<any[]>> {
-    return this.http.get<ApiResponse<any[]>>(`${this.apiUrl}/leave-requests/me`, { headers: this.getHeaders() });
+  getMyLeaveRequests(): Observable<LeaveRequest[]> {
+    return this.http
+      .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/me`)
+      .pipe(map((res) => this.mapper.fromApiArray<LeaveRequest>(res.data)));
   }
 
-getAllPendingRequests(): Observable<number> {
-  return this.http.get<ApiResponse<any[]>>(
-    `${this.apiUrl}/leave-requests/all`,
-    { headers: this.getHeaders() }
-  ).pipe(
-    map(response => response.data.filter(req => req.status === 'PENDING').length)
-  );
+  // 🔹 Leave Request Stats
+  getAllPendingRequests(): Observable<number> {
+  return this.http
+    .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
+    .pipe(map((res) => res.data.filter((r) => r.status === 'pending').length));
 }
 
-  getAllRejectedRequests():  Observable<number> {
-      return this.http.get<ApiResponse<any[]>>(
-      `${this.apiUrl}/leave-requests/all`,
-      { headers: this.getHeaders() }
-    ).pipe(
-      map(response => response.data.filter(req => req.status === 'REJECTED').length)
-    );
-  }
+getAllRejectedRequests(): Observable<number> {
+  return this.http
+    .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
+    .pipe(map((res) => res.data.filter((r) => r.status === 'rejected').length));
+}
 
-  getAllApprouvedRequests():  Observable<number> {
-      return this.http.get<ApiResponse<any[]>>(
-      `${this.apiUrl}/leave-requests/all`,
-      { headers: this.getHeaders() }
-    ).pipe(
-      map(response => response.data.filter(req => req.status === 'APPROVED').length)
-    );
-  }
+getAllApprovedRequests(): Observable<number> {
+  return this.http
+    .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
+    .pipe(map((res) => res.data.filter((r) => r.status === 'approved').length));
+}
 
-  // User APIs
-  getCurrentUser(): Observable<ApiResponse<any>> {
-    return this.http.get<ApiResponse<any>>(`${this.apiUrl}/auth/me`, { headers: this.getHeaders() });
-  }
 
-  // Calendar APIs
-  getCalendarEvents(month?: number, year?: number): Observable<ApiResponse<any[]>> {
+  // 🔹 Calendar APIs
+  getCalendarEvents(month?: number, year?: number): Observable<any[]> {
     const params = new URLSearchParams();
-    if (month !== undefined) params.append('month', month.toString());
-    if (year !== undefined) params.append('year', year.toString());
-    
-    const url = `${this.apiUrl}/calendar/events${params.toString() ? '?' + params.toString() : ''}`;
-    return this.http.get<ApiResponse<any[]>>(url, { headers: this.getHeaders() });
+    if (month !== undefined) params.append('month', String(month));
+    if (year !== undefined) params.append('year', String(year));
+    const url = `${this.apiUrl}/calendar/events${
+      params.toString() ? '?' + params.toString() : ''
+    }`;
+    return this.http
+      .get<ApiResponse<any[]>>(url)
+      .pipe(map((res) => this.mapper.fromApiArray<any>(res.data)));
   }
 
-  // Holidays API
-  getHolidays(year?: number): Observable<ApiResponse<any[]>> {
-    const url = year ? `${this.apiUrl}/holidays?year=${year}` : `${this.apiUrl}/holidays`;
-    return this.http.get<ApiResponse<any[]>>(url, { headers: this.getHeaders() });
+  // 🔹 Holidays
+  getHolidays(year?: number): Observable<Holiday[]> {
+    const url = year
+      ? `${this.apiUrl}/holidays?year=${year}`
+      : `${this.apiUrl}/holidays`;
+    return this.http
+      .get<ApiResponse<Holiday[]>>(url)
+      .pipe(map((res) => this.mapper.fromApiArray<Holiday>(res.data)));
   }
 
-
-  getAllUsers(): Observable<ProfileData[]> {
-    let usersList = this.http.get<ProfileData[]>(`${this.apiUrl}/users`, { headers: this.getHeaders() });
-    return usersList;
+  // 🔹 User APIs
+  getAllUsers(): Observable<User[]> {
+    return this.http
+      .get<ApiResponse<User[]>>(`${this.apiUrl}/users`)
+      .pipe(map((res) => this.mapper.fromApiArray<User>(res.data)));
   }
 
   getAllUsersCount(): Observable<number> {
-  return this.getAllUsers().pipe(
-    map(users => users.length)
-  );
-}
-
+    return this.getAllUsers().pipe(map((users) => users.length));
+  }
 }

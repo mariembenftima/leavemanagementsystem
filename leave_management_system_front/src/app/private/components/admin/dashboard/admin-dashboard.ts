@@ -1,6 +1,10 @@
-import { Component, OnInit, effect, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiService } from '../../../services/api.service';
+import { Activity } from '../../../../types/activity.model';
+import { DataMapperService } from '../../../../helpers/data-mapper.service';
+import { Holiday } from '../../../../types/holiday.model';
+
 
 interface DashboardStats {
   pendingRequests: number;
@@ -10,14 +14,6 @@ interface DashboardStats {
   activeHolidays: number;
 }
 
-interface RecentActivity {
-  id: string;
-  type: 'leave_request' | 'user_created' | 'holiday_added';
-  message: string;
-  timestamp: Date;
-  status?: 'pending' | 'approved' | 'rejected';
-}
-
 @Component({
   selector: 'app-admin-dashboard',
   standalone: false,
@@ -25,62 +21,105 @@ interface RecentActivity {
   styleUrls: ['./admin-dashboard.css'],
 })
 export class AdminDashboard implements OnInit {
-  UserCount = signal<number>(0);
-  pendingLeaveRequestsCount = signal<number>(0);
-  approuvedLeaveRequestsCount = signal<number>(0);
-  rejectedLeaveRequestsCount = signal<number>(0);
+  // 🧠 Reactive signals for live updates
+  userCount = signal<number>(0);
+  pendingCount = signal<number>(0);
+  approvedCount = signal<number>(0);
+  rejectedCount = signal<number>(0);
+  leaveTypeCount = signal<number>(0);
+  holidayCount = signal<number>(0);
+
+  // ✅ Dashboard summary
   stats: DashboardStats = {
-    pendingRequests: 8,
-    approvedRequests: 23,
-    rejectedRequests: 3,
-    totalLeaveTypes: 9,
-    activeHolidays: 12,
+    pendingRequests: 0,
+    approvedRequests: 0,
+    rejectedRequests: 0,
+    totalLeaveTypes: 0,
+    activeHolidays: 0,
   };
 
-  recentActivities: RecentActivity[] = [
-    {
-      id: '1',
-      type: 'leave_request',
-      message: 'John Doe submitted a sick leave request',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      status: 'pending'
-    },
-    {
-      id: '2',
-      type: 'user_created',
-      message: 'New employee Sarah Wilson added to system',
-      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-    },
-    {
-      id: '3',
-      type: 'leave_request',
-      message: 'Maria Garcia annual leave approved',
-      timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
-      status: 'approved'
-    }
-  ];
+  // ✅ Recent backend activities
+  recentActivities: Activity[] = [];
 
-  constructor(private router: Router, private apiService: ApiService) {
-  }
+  constructor(
+    private router: Router,
+    private api: ApiService,
+    private mapper: DataMapperService
+  ) {}
 
   ngOnInit(): void {
-    this.apiService.getAllUsersCount().subscribe(count => {
-      this.UserCount.set(count);
-    });
-
-    this.apiService.getAllPendingRequests().subscribe(response => {
-      this.pendingLeaveRequestsCount.set(response);
-    });
-
-    this.apiService.getAllRejectedRequests().subscribe(response => {
-      this.rejectedLeaveRequestsCount.set(response);
-    });
-
-    this.apiService.getAllApprouvedRequests().subscribe(response => {
-      this.approuvedLeaveRequestsCount.set(response);
-    });
+    this.loadDashboardData();
   }
 
+  // 🔹 Fetch all required dashboard data
+  private loadDashboardData(): void {
+    // 1️⃣ User count
+    this.api.getAllUsersCount().subscribe({
+      next: (count) => this.userCount.set(count),
+      error: (err) => console.error('Failed to load user count', err),
+    });
+
+    // 2️⃣ Leave request stats
+    this.api.getAllPendingRequests().subscribe({
+      next: (res) => {
+        this.pendingCount.set(res);
+        this.stats.pendingRequests = res;
+      },
+    });
+
+    this.api.getAllRejectedRequests().subscribe({
+      next: (res) => {
+        this.rejectedCount.set(res);
+        this.stats.rejectedRequests = res;
+      },
+    });
+
+    this.api.getAllApprovedRequests().subscribe({
+      next: (res) => {
+        this.approvedCount.set(res);
+        this.stats.approvedRequests = res;
+      },
+    });
+
+    // 3️⃣ Leave types
+    this.api.getLeaveTypes().subscribe({
+      next: (res) => {
+        this.leaveTypeCount.set(res.length);
+        this.stats.totalLeaveTypes = res.length;
+      },
+      error: (err) => console.error('Failed to load leave types', err),
+    });
+
+    // 4️⃣ Holidays
+    this.api.getHolidays().subscribe({
+      next: (res) => {
+        const activeHolidays = res.filter(
+          (h: Holiday) => new Date(h.date) > new Date()
+        );
+        this.holidayCount.set(activeHolidays.length);
+        this.stats.activeHolidays = activeHolidays.length;
+      },
+      error: (err) => console.error('Failed to load holidays', err),
+    });
+
+    // 5️⃣ Recent Activities
+    this.loadRecentActivities();
+  }
+
+  private loadRecentActivities(): void {
+    this.api
+      .getDashboardData()
+      .subscribe({
+        next: (res) => {
+          // Assuming your backend includes `recentActivities`
+          const mapped = this.mapper.fromApiArray<Activity>(res.activities || []);
+          this.recentActivities = mapped.slice(0, 6); // Limit to latest 6
+        },
+        error: (err) => console.error('Failed to load activities', err),
+      });
+  }
+
+  // ✅ Utility functions for UI
   navigateTo(route: string): void {
     this.router.navigate([route]);
   }
@@ -94,20 +133,19 @@ export class AdminDashboard implements OnInit {
     }
   }
 
-  formatTime(date: Date): string {
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    return `${Math.floor(diffInHours / 24)}d ago`;
+  formatTime(timestamp: string | Date): string {
+    const date = new Date(timestamp);
+    const diffMs = Date.now() - date.getTime();
+    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+    if (diffHrs < 1) return 'Just now';
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    return `${Math.floor(diffHrs / 24)}d ago`;
   }
 
-  // Get color for activity status
-  getStatusColor(status: string): string {
-    switch (status) {
+  getStatusColor(status: string | undefined): string {
+    switch (status?.toLowerCase()) {
       case 'pending': return '#f39c12';
-      case 'approved': return '#27ae60';  
+      case 'approved': return '#27ae60';
       case 'rejected': return '#e74c3c';
       default: return '#95a5a6';
     }

@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
+import { User } from '../../types/user.model';
+
 
 export interface LoginRequest {
   email: string;
@@ -13,30 +15,20 @@ export interface LoginResponse {
   success: boolean;
   data: {
     access_token: string;
-    user: {
-      id: string;
-      email: string;
-      firstName: string;
-      lastName: string;
-      roles: string[];
-    };
+    user: User;
   };
   message?: string;
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthService {
   private apiUrl = environment.apiUrl;
-  private currentUserSubject = new BehaviorSubject<any>(null);
+  private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
-  constructor(
-    private http: HttpClient,
-    private router: Router
-  ) {
-    // Check if user is already logged in
+  constructor(private http: HttpClient, private router: Router) {
     const token = localStorage.getItem('authToken');
     const user = localStorage.getItem('currentUser');
     if (token && user) {
@@ -44,19 +36,23 @@ export class AuthService {
     }
   }
 
+  // 🔹 Login and store credentials
   login(credentials: LoginRequest): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.apiUrl}/auth/login`, credentials)
+    return this.http
+      .post<LoginResponse>(`${this.apiUrl}/auth/login`, credentials)
       .pipe(
-        tap(response => {
+        tap((response) => {
           if (response.success && response.data.access_token) {
+            const user = response.data.user;
             localStorage.setItem('authToken', response.data.access_token);
-            localStorage.setItem('currentUser', JSON.stringify(response.data.user));
-            this.currentUserSubject.next(response.data.user);
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            this.currentUserSubject.next(user);
           }
         })
       );
   }
 
+  // 🔹 Logout and clear storage
   logout(): void {
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUser');
@@ -64,30 +60,47 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
-  getCurrentUser(): any {
+  // 🔹 Getters
+  getCurrentUser(): User | null {
     return this.currentUserSubject.value;
   }
 
   getCurrentUserId(): string | null {
-    const user = this.getCurrentUser();
-    return user ? user.id : null;
-  }
-
-  isLoggedIn(): boolean {
-    return !!localStorage.getItem('authToken');
-  }
-
-  hasRole(role: string): boolean {
-    const user = this.getCurrentUser();
-    return user && user.roles && user.roles.includes(role);
+    return this.getCurrentUser()?.id || null;
   }
 
   getToken(): string | null {
     return localStorage.getItem('authToken');
   }
 
-  setCurrentUser(user: any): void {
+  isLoggedIn(): boolean {
+    return !!this.getToken();
+  }
+
+  // 🔹 Roles (string-based)
+  hasRole(role: string): boolean {
+    const user = this.getCurrentUser();
+    if (!user || !user.roles) return false;
+    return user.roles.split(',').map((r) => r.trim()).includes(role);
+  }
+
+  setCurrentUser(user: User): void {
     localStorage.setItem('currentUser', JSON.stringify(user));
     this.currentUserSubject.next(user);
+  }
+
+  // 🔹 Helper to add headers for protected endpoints
+  private authHeaders(): HttpHeaders {
+    const token = this.getToken();
+    return new HttpHeaders({
+      Authorization: token ? `Bearer ${token}` : '',
+    });
+  }
+
+  // 🔹 Example API call using auth header
+  getProfileFromServer(): Observable<User> {
+    return this.http.get<User>(`${this.apiUrl}/auth/profile`, {
+      headers: this.authHeaders(),
+    });
   }
 }
