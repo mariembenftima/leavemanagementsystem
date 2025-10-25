@@ -4,6 +4,8 @@ import {
   AfterViewInit,
   OnDestroy,
   HostListener,
+  ViewChild,
+  ElementRef,
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { EmployeeProfileData } from '../../../types/user/profileType/employee-profile-data.type';
@@ -14,14 +16,18 @@ import { DataMapperService } from '../../../../helpers/data-mapper.service';
 @Component({
   selector: 'app-employee-profile',
   templateUrl: './user-profile.html',
+  
   styleUrls: ['./user-profile.css'],
   standalone: false,
+  
 })
 export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
+[x: string]: any;
   employeeData!: EmployeeProfileData;
   leaveBalances: Record<string, LeaveBalance> = {};
   isLoading = true;
   hasError = false;
+  @ViewChild('loadingOrError') loadingOrError!: ElementRef;
 
   private autoSaveTimer?: number;
   private clockInterval?: number;

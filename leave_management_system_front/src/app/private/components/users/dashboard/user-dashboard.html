@@ -1,10 +1,10 @@
-
 <div class="app-container">
   <app-user-nav-bar></app-user-nav-bar>
+
   <div class="main-content dashboard-main">
     <app-user-side-bar></app-user-side-bar>
+
     <div class="dashboard-content">
-      
       <!-- Loading Indicator -->
       <div *ngIf="isLoading" class="loading-container">
         <div class="loading-spinner"></div>
@@ -12,107 +12,122 @@
       </div>
 
       <!-- Error Message -->
-      <div *ngIf="error && !isLoading" class="error-container">
+      <div *ngIf="hasError && !isLoading" class="error-container">
         <div class="error-message">
           <i class="fas fa-exclamation-triangle"></i>
-          {{ error }}
-          <button class="btn btn-primary" (click)="refreshData()">
-            <i class="fas fa-refresh"></i> Try Again
-          </button>
+          Failed to load dashboard data. Please try again later.
         </div>
       </div>
 
-      <!-- Main Content -->
-      <div *ngIf="!isLoading && !error">
-        <h2>Welcome, {{ employeeData.name || 'User' }}!</h2>
+      <!-- Main Dashboard Content -->
+      <div *ngIf="!isLoading && !hasError && dashboardData">
+        <h2>Welcome, {{ employee?.fullname || 'User' }}!</h2>
+
+        <!-- USER INFO SECTION -->
         <div class="dashboard-section">
           <h3>👤 User Information</h3>
           <div class="user-info-grid">
-          <div class="info-item">
-            <div class="info-icon">👔</div>
-            <div class="info-details">
-              <span class="info-label">Role</span>
-              <span class="info-value">{{ employeeData.role }}</span>
+            <div class="info-item">
+              <div class="info-icon">👔</div>
+              <div class="info-details">
+                <span class="info-label">Role</span>
+                <span class="info-value">{{ employee?.roles }}</span>
+              </div>
             </div>
-          </div>
-          <div class="info-item">
-            <div class="info-icon">🏢</div>
-            <div class="info-details">
-              <span class="info-label">Department</span>
-              <span class="info-value">{{ employeeData.department }}</span>
+            <div class="info-item">
+              <div class="info-icon">🏢</div>
+              <div class="info-details">
+                <span class="info-label">Department</span>
+                <span class="info-value">{{ employee?.department }}</span>
+              </div>
             </div>
-          </div>
-          <div class="info-item">
-            <div class="info-icon">📧</div>
-            <div class="info-details">
-              <span class="info-label">Email</span>
-              <span class="info-value">{{ employeeData.email }}</span>
+            <div class="info-item">
+              <div class="info-icon">📧</div>
+              <div class="info-details">
+                <span class="info-label">Email</span>
+                <span class="info-value">{{ employee?.email }}</span>
+              </div>
             </div>
-          </div>
-          <div class="info-item">
-            <div class="info-icon">📱</div>
-            <div class="info-details">
-              <span class="info-label">Phone</span>
-              <span class="info-value">{{ employeeData.phone }}</span>
+            <div class="info-item">
+              <div class="info-icon">📱</div>
+              <div class="info-details">
+                <span class="info-label">Phone</span>
+                <span class="info-value">{{ employee?.phone }}</span>
+              </div>
             </div>
-          </div>
-          <div class="info-item">
-            <div class="info-icon">📅</div>
-            <div class="info-details">
-              <span class="info-label">Join Date</span>
-              <span class="info-value">{{ employeeData.joinDate }}</span>
-            </div>
-          </div>
-          <div class="info-item">
-            <div class="info-icon">🎯</div>
-            <div class="info-details">
-              <span class="info-label">Experience</span>
-              <span class="info-value">{{ employeeData.experience }}</span>
+            <div class="info-item">
+              <div class="info-icon">📅</div>
+              <div class="info-details">
+                <span class="info-label">Join Date</span>
+                <span class="info-value">
+                  {{ employee?.created_at | date: 'longDate' }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      <div class="dashboard-section">
-        <h3>Leave Summary</h3>
-        <table class="leave-table">
-          <tr>
-            <th>Type</th>
-            <th>Total</th>
-            <th>Used</th>
-            <th>Remaining</th>
-          </tr>
-          <tr>
-            <td>Annual</td>
-            <td>{{ leaveData.annual.total }}</td>
-            <td>{{ leaveData.annual.used }}</td>
-            <td>{{ leaveData.annual.remaining }}</td>
-          </tr>
-          <tr>
-            <td>Sick</td>
-            <td>{{ leaveData.sick.total }}</td>
-            <td>{{ leaveData.sick.used }}</td>
-            <td>{{ leaveData.sick.remaining }}</td>
-          </tr>
-          <tr>
-            <td>Personal</td>
-            <td>{{ leaveData.personal.total }}</td>
-            <td>{{ leaveData.personal.used }}</td>
-            <td>{{ leaveData.personal.remaining }}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <!-- Quick Actions -->
-      <div class="dashboard-section">
-        <h3>Quick Actions</h3>
-        <div class="dashboard-actions">
-          <button class="action-btn" (click)="navigateTo('/leaverequests')">Request Leave</button>
-          <button class="action-btn" (click)="navigateTo('/calender')">View Calendar</button>
-          <button class="action-btn" (click)="navigateTo('/profile')">My Profile</button>
-          <button class="action-btn" (click)="navigateTo('/approves')">Approvals</button>
+
+        <!-- LEAVE SUMMARY -->
+        <div class="dashboard-section" *ngIf="leaveBalance | keyvalue as balances">
+          <h3>🏖️ Leave Summary</h3>
+          <table class="leave-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Total</th>
+                <th>Used</th>
+                <th>Remaining</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of balances">
+                <td class="text-capitalize">{{ item.key }}</td>
+                <td>{{ item.value.total }}</td>
+                <td>{{ item.value.used }}</td>
+                <td>{{ item.value.remaining }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- HOLIDAYS -->
+        <div class="dashboard-section" *ngIf="holidays.length > 0">
+          <h3>🎉 Upcoming Holidays</h3>
+          <ul class="holiday-list">
+            <li *ngFor="let h of holidays">
+              <strong>{{ h.name }}</strong> — {{ h.date | date: 'longDate' }}
+            </li>
+          </ul>
+        </div>
+
+        <!-- PERFORMANCE -->
+        <div class="dashboard-section" *ngIf="performance.length > 0">
+          <h3>📈 Performance Reviews</h3>
+          <div class="performance-grid">
+            <div class="performance-card" *ngFor="let p of performance">
+              <h4>Review Period: {{ p.reviewPeriod }}</h4>
+              <p><strong>Rating:</strong> {{ p.rating }}/5</p>
+              <p><strong>Goals:</strong> {{ p.goals }}</p>
+              <p><strong>Achievements:</strong> {{ p.achievements }}</p>
+              <p><strong>Feedback:</strong> {{ p.feedback }}</p>
+              <p class="timestamp">
+                <i class="fas fa-calendar-alt"></i>
+                Last updated: {{ p.updatedAt | date: 'medium' }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACTIVITIES -->
+        <div class="dashboard-section" *ngIf="activities.length > 0">
+          <h3>🕒 Recent Activities</h3>
+          <ul class="activity-list">
+            <li *ngFor="let a of activities">
+              {{ a.description }} ({{ a.createdAt | date: 'short' }})
+            </li>
+          </ul>
         </div>
       </div>
-      </div> <!-- End main content div -->
     </div>
   </div>
 </div>

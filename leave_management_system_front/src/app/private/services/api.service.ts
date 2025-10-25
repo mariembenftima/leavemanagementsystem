@@ -18,7 +18,7 @@ import { ApiResponse } from '../../types/api-response.type';
 export class ApiService {
   private apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient, private mapper: DataMapperService) {}
+  constructor(private http: HttpClient, private mapper: DataMapperService) { }
 
   // 🔹 Profile APIs
   getProfile(userId?: string): Observable<EmployeeProfileData> {
@@ -86,22 +86,22 @@ export class ApiService {
 
   // 🔹 Leave Request Stats
   getAllPendingRequests(): Observable<number> {
-  return this.http
-    .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
-    .pipe(map((res) => res.data.filter((r) => r.status === 'pending').length));
-}
+    return this.http
+      .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
+      .pipe(map((res) => res.data.filter((r) => r.status === 'pending').length));
+  }
 
-getAllRejectedRequests(): Observable<number> {
-  return this.http
-    .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
-    .pipe(map((res) => res.data.filter((r) => r.status === 'rejected').length));
-}
+  getAllRejectedRequests(): Observable<number> {
+    return this.http
+      .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
+      .pipe(map((res) => res.data.filter((r) => r.status === 'rejected').length));
+  }
 
-getAllApprovedRequests(): Observable<number> {
-  return this.http
-    .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
-    .pipe(map((res) => res.data.filter((r) => r.status === 'approved').length));
-}
+  getAllApprovedRequests(): Observable<number> {
+    return this.http
+      .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
+      .pipe(map((res) => res.data.filter((r) => r.status === 'approved').length));
+  }
 
 
   // 🔹 Calendar APIs
@@ -109,9 +109,8 @@ getAllApprovedRequests(): Observable<number> {
     const params = new URLSearchParams();
     if (month !== undefined) params.append('month', String(month));
     if (year !== undefined) params.append('year', String(year));
-    const url = `${this.apiUrl}/calendar/events${
-      params.toString() ? '?' + params.toString() : ''
-    }`;
+    const url = `${this.apiUrl}/calendar/events${params.toString() ? '?' + params.toString() : ''
+      }`;
     return this.http
       .get<ApiResponse<any[]>>(url)
       .pipe(map((res) => this.mapper.fromApiArray<any>(res.data)));
@@ -137,4 +136,15 @@ getAllApprovedRequests(): Observable<number> {
   getAllUsersCount(): Observable<number> {
     return this.getAllUsers().pipe(map((users) => users.length));
   }
+  // 🔹 Register user with optional profile picture
+  registerWithFile(formData: FormData): Promise<any> {
+    const url = `${this.apiUrl}/auth/register`;
+    return this.http.post<ApiResponse<any>>(url, formData).toPromise();
+  }
+
 }
+
+export type { LeaveRequest };
+
+  export type { LeaveType };
+

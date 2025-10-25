@@ -25,4 +25,5 @@ export interface EmployeeProfileData {
   team_name?: string; // joined from teams.name
   created_at: string;
   updated_at: string;
+  isActive: boolean;
 }

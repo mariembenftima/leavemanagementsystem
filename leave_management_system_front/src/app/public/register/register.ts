@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { ApiService } from '../../private/services/api.service';
 import { AuthService } from '../../private/services/auth.service';
 import { CommonModule } from '@angular/common';
+import { Team } from '../../types/team.model';
 
 @Component({
   selector: 'app-register',
@@ -20,17 +21,7 @@ export class RegisterComponent {
   selectedFile: File | null = null;
   profilePicturePreview: string | null = null;
 
-  teams = [
-    { id: 1, name: 'Human Resources' },
-    { id: 2, name: 'Information Technology' },
-    { id: 3, name: 'Marketing' },
-    { id: 4, name: 'Finance' },
-    { id: 5, name: 'Sales' },
-    { id: 6, name: 'Operations' },
-    { id: 7, name: 'Legal' },
-    { id: 8, name: 'Customer Support' }
-  ];
-
+  teams : Team[] = []
   constructor(
     private formBuilder: FormBuilder,
     private apiService: ApiService,

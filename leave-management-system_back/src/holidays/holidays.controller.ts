@@ -13,7 +13,7 @@ export class HolidaysController {
     const mockHolidays = [
       {
         id: '1',
-        name: 'New Year\'s Day',
+        name: "New Year's Day",
         date: '2025-01-01',
         type: 'national'
       },

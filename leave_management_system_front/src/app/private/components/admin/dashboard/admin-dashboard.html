@@ -1,101 +1,100 @@
 <div class="app-container">
   <app-admin-nav-bar></app-admin-nav-bar>
+
   <div class="main-content admin-dashboard-main">
     <app-admin-side-bar></app-admin-side-bar>
+
     <div class="admin-dashboard-content">
       <h1>🏢 Admin Dashboard</h1>
-      
-      <!-- Statistics Cards -->
+
+      <!-- STATISTICS CARDS -->
       <div class="stats-grid">
+        <!-- Total Employees -->
         <div class="stat-card">
           <div class="stat-icon" style="background: #e3f2fd;">👥</div>
           <div class="stat-info">
-            <h3>{{ this.UserCount() }}</h3>
+            <h3>{{ userCount() }}</h3>
             <p>Total Employees</p>
           </div>
         </div>
-        
+
+        <!-- Pending Requests -->
         <div class="stat-card">
           <div class="stat-icon" style="background: #fff3e0;">⏳</div>
           <div class="stat-info">
-            <h3>{{ pendingLeaveRequestsCount() }}</h3>
+            <h3>{{ pendingCount() }}</h3>
             <p>Pending Requests</p>
           </div>
         </div>
-        
+
+        <!-- Approved Requests -->
         <div class="stat-card">
           <div class="stat-icon" style="background: #e8f5e8;">✅</div>
           <div class="stat-info">
-            <h3>{{ approuvedLeaveRequestsCount() }}</h3>
+            <h3>{{ approvedCount() }}</h3>
             <p>Approved This Month</p>
           </div>
         </div>
-        
+
+        <!-- Rejected Requests -->
         <div class="stat-card">
           <div class="stat-icon" style="background: #ffebee;">❌</div>
           <div class="stat-info">
-            <h3>{{ rejectedLeaveRequestsCount() }}</h3>
+            <h3>{{ rejectedCount() }}</h3>
             <p>Rejected This Month</p>
           </div>
         </div>
-        
+
+        <!-- Leave Types -->
         <div class="stat-card">
           <div class="stat-icon" style="background: #f3e5f5;">📋</div>
           <div class="stat-info">
-            <h3>{{ stats.totalLeaveTypes }}</h3>
+            <h3>{{ leaveTypeCount() }}</h3>
             <p>Leave Types</p>
           </div>
         </div>
-        
+
+        <!-- Upcoming Holidays -->
         <div class="stat-card">
           <div class="stat-icon" style="background: #e0f2f1;">🎉</div>
           <div class="stat-info">
-            <h3>{{ stats.activeHolidays }}</h3>
+            <h3>{{ holidayCount() }}</h3>
             <p>Upcoming Holidays</p>
           </div>
         </div>
       </div>
 
-      <!-- Recent Activities -->
+      <!-- RECENT ACTIVITIES -->
       <div class="dashboard-section">
         <h2>📈 Recent Activities</h2>
-        <div class="activities-list">
+
+        <div *ngIf="recentActivities.length > 0; else noActivities" class="activities-list">
           <div class="activity-item" *ngFor="let activity of recentActivities">
-            <div class="activity-icon">{{ getActivityIcon(activity.type) }}</div>
+            <div class="activity-icon">{{ getActivityIcon(activity.activityType) }}</div>
+
             <div class="activity-details">
-              <p class="activity-message">{{ activity.message }}</p>
-              <span class="activity-time">{{ formatTime(activity.timestamp) }}</span>
+              <p class="activity-message">{{ activity.description }}</p>
+              <span class="activity-time">{{ formatTime(activity.activityDate) }}</span>
             </div>
-            <div class="activity-status" *ngIf="activity.status" 
-                 [style.background-color]="getStatusColor(activity.status || 'pending')">
-              {{ activity.status }}
-            </div>
+
           </div>
         </div>
+
+        <ng-template #noActivities>
+          <p class="empty-message">No recent activities available.</p>
+        </ng-template>
       </div>
 
-      <!-- Quick Actions -->
+      <!-- QUICK ACTIONS -->
       <div class="dashboard-section">
         <h2>⚡ Quick Actions</h2>
         <div class="admin-actions">
-          <button class="admin-action-btn" (click)="navigateTo('/admin/users')">
-            👥 Manage Users
-          </button>
-          <button class="admin-action-btn" (click)="navigateTo('/admin/leaves')">
-            📝 Review Requests
-          </button>
-          <button class="admin-action-btn" (click)="navigateTo('/admin/holidays')">
-            🗓️ Manage Holidays
-          </button>
-          <button class="admin-action-btn" (click)="navigateTo('/admin/reports')">
-            📊 View Reports
-          </button>
-          <button class="admin-action-btn" (click)="navigateTo('/admin/settings')">
-            ⚙️ System Settings
-          </button>
-          <button class="admin-action-btn" (click)="navigateTo('/admin/leave-types')">
-            📋 Leave Types
-          </button>
+          <button class="admin-action-btn" (click)="navigateTo('/admin/users')">👥 Manage Users</button>
+          <button class="admin-action-btn" (click)="navigateTo('/admin/leaves')">📝 Review Requests</button>
+          <button class="admin-action-btn" (click)="navigateTo('/admin/holidays')">🗓️ Manage Holidays</button>
+          <button class="admin-action-btn" (click)="navigateTo('/admin/reports')">📊 View Reports</button>
+          <button class="admin-action-btn" (click)="navigateTo('/admin/settings')">⚙️ System Settings</button>
+          <button class="admin-action-btn" (click)="navigateTo('/admin/leave-types')">📋 Leave Types</button>
         </div>
       </div>
     </div>

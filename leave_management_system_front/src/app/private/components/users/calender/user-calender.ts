@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { lastValueFrom } from 'rxjs';
 import { LEAVE_TYPES } from '../../../types/user/leaveRequestsType/leave-types';
-import { ApiService } from '../../../services/api.service';
+import { ApiService, LeaveRequest } from '../../../services/api.service';
 import { AuthService } from '../../../services/auth.service';
+import { Holiday } from '../../../../types/holiday.model';
 
 interface CalendarEvent {
   id: string;
@@ -27,6 +29,8 @@ interface CalendarDay {
   events: CalendarEvent[];
 }
 
+
+
 @Component({
   selector: 'app-calendar',
   templateUrl: './user-calender.html',
@@ -35,37 +39,27 @@ interface CalendarDay {
 })
 export class UserCalender implements OnInit {
   currentDate = new Date();
-  currentMonth = this.currentDate.getMonth(); // 0-based month
+  currentMonth = this.currentDate.getMonth(); // 0-based
   currentYear = this.currentDate.getFullYear();
 
   months = [
-    'Janvier',
-    'Février',
-    'Mars',
-    'Avril',
-    'Mai',
-    'Juin',
-    'Juillet',
-    'Août',
-    'Septembre',
-    'Octobre',
-    'Novembre',
-    'Décembre',
+    'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+    'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
   ];
   days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
   calendarDays: CalendarDay[] = [];
-  selectedView = 'calendar';
+  events: CalendarEvent[] = [];
+
+  selectedView: 'calendar' | 'validation' = 'calendar';
   selectedDepartment = '';
   selectedMonth = '';
 
   leaveTypes = LEAVE_TYPES;
-
-  events: CalendarEvent[] = [];
-
   isLoading = false;
-  holidays: any[] = [];
-  myLeaveRequests: any[] = [];
+
+  holidays : Holiday[] = [];
+  myLeaveRequests: LeaveRequest[] = [];
 
   constructor(
     private router: Router,
@@ -73,49 +67,49 @@ export class UserCalender implements OnInit {
     private authService: AuthService
   ) {}
 
-  ngOnInit(): void {
-    this.generateCalendar();
-    this.loadCalendarData();
+  async ngOnInit(): Promise<void> {
+    await this.refreshCalendar();
   }
 
-  private loadCalendarData(): void {
+  /** 🔹 Refresh calendar and reload data */
+  async refreshCalendar(): Promise<void> {
     this.isLoading = true;
-    
-    Promise.all([
-      this.apiService.getCalendarEvents(this.currentMonth + 1, this.currentYear).toPromise(),
-      this.apiService.getHolidays(this.currentYear).toPromise(),
-      this.apiService.getMyLeaveRequests().toPromise()
-    ]).then(([eventsResponse, holidaysResponse, leaveResponse]) => {
-      // Process calendar events from API
-      if (eventsResponse?.success && eventsResponse.data) {
-        const apiEvents = this.processCalendarEvents(eventsResponse.data);
-        this.events = [...this.events, ...apiEvents]; // Merge with existing dummy data
-      }
-
-      // Process holidays
-      if (holidaysResponse?.success && holidaysResponse.data) {
-        this.holidays = holidaysResponse.data;
-        this.addHolidaysToCalendar(holidaysResponse.data);
-      }
-
-      // Process my leave requests
-      if (leaveResponse?.success && leaveResponse.data) {
-        this.myLeaveRequests = leaveResponse.data;
-        this.addLeaveRequestsToCalendar(leaveResponse.data);
-      }
-
+    try {
+      await this.loadCalendarData();
+      this.generateCalendar();
+    } catch (error) {
+      console.error('Error loading calendar:', error);
+    } finally {
       this.isLoading = false;
-      this.generateCalendar(); // Regenerate calendar with new data
-    }).catch((error: any) => {
-      console.error('Error loading calendar data:', error);
-      this.isLoading = false;
-    });
+    }
   }
 
+  /** 🔹 Load all calendar-related data from backend */
+private async loadCalendarData(): Promise<void> {
+  try {
+    const [events, holidays, leaves] = await Promise.all([
+      lastValueFrom(this.apiService.getCalendarEvents(this.currentMonth + 1, this.currentYear)),
+      lastValueFrom(this.apiService.getHolidays(this.currentYear)),
+      lastValueFrom(this.apiService.getMyLeaveRequests())
+    ]);
+
+    this.events = this.processCalendarEvents(events);
+    this.holidays = holidays;
+    this.myLeaveRequests = leaves;
+
+    this.addHolidaysToCalendar(holidays);
+    this.addLeaveRequestsToCalendar(leaves);
+  } catch (err) {
+    console.error('Failed to fetch calendar data:', err);
+  }
+}
+
+
+  /** 🔹 Map API events to CalendarEvent format */
   private processCalendarEvents(apiEvents: any[]): CalendarEvent[] {
     return apiEvents.map(event => ({
       id: event.id,
-      title: event.title || `${event.user?.firstName} ${event.user?.lastName}`,
+      title: event.title || `${event.user?.firstName ?? ''} ${event.user?.lastName ?? ''}`,
       type: this.mapLeaveTypeToCalendarType(event.leaveType?.name || event.type),
       startDate: new Date(event.startDate),
       endDate: new Date(event.endDate),
@@ -123,42 +117,48 @@ export class UserCalender implements OnInit {
     }));
   }
 
+  /** 🔹 Add holidays to event list */
   private addHolidaysToCalendar(holidays: any[]): void {
     holidays.forEach(holiday => {
-      if (this.isInCurrentMonth(new Date(holiday.date))) {
+      const date = new Date(holiday.date);
+      if (this.isInCurrentMonth(date)) {
         this.events.push({
           id: `holiday-${holiday.id}`,
           title: holiday.name,
-          type: 'autres', // holidays mapped to 'autres' type
-          startDate: new Date(holiday.date),
-          endDate: new Date(holiday.date),
+          type: 'autres',
+          startDate: date,
+          endDate: date,
           color: '#ef4444',
         });
       }
     });
   }
 
+  /** 🔹 Add approved leave requests to calendar */
   private addLeaveRequestsToCalendar(leaveRequests: any[]): void {
-    const currentUser = this.authService.getCurrentUser();
-    
     leaveRequests
-      .filter((req: any) => req.status === 'approved')
-      .forEach((request: any) => {
-        if (this.isDateRangeInCurrentMonth(new Date(request.startDate), new Date(request.endDate))) {
+      .filter(req => req.status === 'approved')
+      .forEach(req => {
+        const start = new Date(req.startDate);
+        const end = new Date(req.endDate);
+        if (this.isDateRangeInCurrentMonth(start, end)) {
           this.events.push({
-            id: `leave-${request.id}`,
-            title: `My ${request.leaveType?.name || 'Leave'}`,
-            type: this.mapLeaveTypeToCalendarType(request.leaveType?.name),
-            startDate: new Date(request.startDate),
-            endDate: new Date(request.endDate),
-            color: this.getLeaveTypeColor(request.leaveType?.name),
+            id: `leave-${req.id}`,
+            title: `My ${req.leaveType?.name || 'Leave'}`,
+            type: this.mapLeaveTypeToCalendarType(req.leaveType?.name),
+            startDate: start,
+            endDate: end,
+            color: this.getLeaveTypeColor(req.leaveType?.name),
           });
         }
       });
   }
 
-  private mapLeaveTypeToCalendarType(leaveTypeName: string): 'congé-payé' | 'congé-non-payé' | 'congé-maladie' | 'congé-maternité' | 'non-traité' | 'autres' {
-    const typeMap: { [key: string]: 'congé-payé' | 'congé-non-payé' | 'congé-maladie' | 'congé-maternité' | 'non-traité' | 'autres' } = {
+  /** 🔹 Map backend leave type to calendar type */
+  private mapLeaveTypeToCalendarType(
+    name: string
+  ): 'congé-payé' | 'congé-non-payé' | 'congé-maladie' | 'congé-maternité' | 'non-traité' | 'autres' {
+    const map: Record<string, any> = {
       'Annual Leave': 'congé-payé',
       'Personal Leave': 'congé-payé',
       'Sick Leave': 'congé-maladie',
@@ -168,22 +168,12 @@ export class UserCalender implements OnInit {
       'Study Leave': 'congé-non-payé',
       'Compassionate Leave': 'autres',
     };
-    return typeMap[leaveTypeName] || 'autres';
+    return map[name] || 'autres';
   }
 
-  private isInCurrentMonth(date: Date): boolean {
-    return date.getMonth() === this.currentMonth && date.getFullYear() === this.currentYear;
-  }
-
-  private isDateRangeInCurrentMonth(startDate: Date, endDate: Date): boolean {
-    const currentMonthStart = new Date(this.currentYear, this.currentMonth, 1);
-    const currentMonthEnd = new Date(this.currentYear, this.currentMonth + 1, 0);
-    
-    return (startDate <= currentMonthEnd && endDate >= currentMonthStart);
-  }
-
-  private getLeaveTypeColor(leaveTypeName: string): string {
-    const colorMap: { [key: string]: string } = {
+  /** 🔹 Color mapping for leave types */
+  private getLeaveTypeColor(name: string): string {
+    const colorMap: Record<string, string> = {
       'Annual Leave': '#3b82f6',
       'Sick Leave': '#ef4444',
       'Personal Leave': '#10b981',
@@ -194,136 +184,110 @@ export class UserCalender implements OnInit {
       'Compassionate Leave': '#f97316',
       'holiday': '#ef4444',
     };
-    return colorMap[leaveTypeName] || '#6b7280';
+    return colorMap[name] || '#6b7280';
   }
 
-  private getJavaScriptMonth(month: number): number {
-    return month - 1;
-  }
-
+  /** 🔹 Build the full 6-week (42-day) calendar grid */
   generateCalendar(): void {
     const firstDay = new Date(this.currentYear, this.currentMonth, 1);
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay()); // Start on the previous Sunday
+    const start = new Date(firstDay);
+    start.setDate(start.getDate() - firstDay.getDay());
 
     this.calendarDays = [];
 
     for (let i = 0; i < 42; i++) {
-      const date = new Date(startDate);
-      date.setDate(startDate.getDate() + i);
+      const date = new Date(start);
+      date.setDate(start.getDate() + i);
 
-      const dayEvents = this.events.filter(
-        (e) => date >= e.startDate && date <= e.endDate
-      );
+      const eventsForDay = this.events.filter(e => date >= e.startDate && date <= e.endDate);
 
       this.calendarDays.push({
         date,
         dayNumber: date.getDate(),
         isCurrentMonth: date.getMonth() === this.currentMonth,
         isToday: this.sameYMD(date, new Date()),
-        events: dayEvents,
+        events: eventsForDay,
       });
     }
   }
 
-  private sameYMD(a: Date, b: Date): boolean {
-    return (
-      a.getFullYear() === b.getFullYear() &&
-      a.getMonth() === b.getMonth() &&
-      a.getDate() === b.getDate()
-    );
-  }
-
+  /** 🔹 Navigation & utility functions */
   previousMonth(): void {
     if (this.currentMonth === 0) {
       this.currentMonth = 11;
       this.currentYear--;
-    } else {
-      this.currentMonth--;
-    }
-    this.generateCalendar();
+    } else this.currentMonth--;
+    this.refreshCalendar();
   }
 
   nextMonth(): void {
     if (this.currentMonth === 11) {
       this.currentMonth = 0;
       this.currentYear++;
-    } else {
-      this.currentMonth++;
-    }
-    this.generateCalendar();
-    this.loadCalendarData(); // Reload data for new month
+    } else this.currentMonth++;
+    this.refreshCalendar();
   }
 
   goToToday(): void {
     const today = new Date();
     this.currentMonth = today.getMonth();
     this.currentYear = today.getFullYear();
-    this.generateCalendar();
-    this.loadCalendarData();
-  }
-
-  goToMonth(month: number, year: number): void {
-    this.currentMonth = month;
-    this.currentYear = year;
-    this.generateCalendar();
-    this.loadCalendarData();
-  }
-
-  setView(view: string): void {
-    this.selectedView = view;
-  }
-
-  onDepartmentChange(event: any): void {
-    this.selectedDepartment = event.target.value;
-  }
-
-  onMonthChange(event: any): void {
-    this.selectedMonth = event.target.value;
-  }
-
-  refreshCalendar(): void {
-    this.loadCalendarData();
+    this.refreshCalendar();
   }
 
   getCurrentMonthYear(): string {
     return `${this.months[this.currentMonth]} ${this.currentYear}`;
   }
 
-  getEventsByType(type: string): CalendarEvent[] {
-    return this.events.filter((event) => event.type === type);
+  setView(view: 'calendar' | 'validation'): void {
+    this.selectedView = view;
+  }
+
+  onDepartmentChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    this.selectedDepartment = target.value;
+  }
+
+  onMonthChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    this.selectedMonth = target.value;
+    const month = Number(target.value) - 1;
+    if (!isNaN(month)) {
+      this.currentMonth = month;
+      this.refreshCalendar();
+    }
+  }
+
+  /** 🔹 Helpers */
+  private sameYMD(a: Date, b: Date): boolean {
+    return a.getFullYear() === b.getFullYear() &&
+           a.getMonth() === b.getMonth() &&
+           a.getDate() === b.getDate();
+  }
+
+  private isInCurrentMonth(date: Date): boolean {
+    return date.getMonth() === this.currentMonth && date.getFullYear() === this.currentYear;
+  }
+
+  private isDateRangeInCurrentMonth(start: Date, end: Date): boolean {
+    const monthStart = new Date(this.currentYear, this.currentMonth, 1);
+    const monthEnd = new Date(this.currentYear, this.currentMonth + 1, 0);
+    return start <= monthEnd && end >= monthStart;
+  }
+
+  /** 🔹 Template utilities */
+  isWeekend(date: Date): boolean {
+    const day = date.getDay();
+    return day === 0 || day === 6;
   }
 
   onEventClick(event: CalendarEvent): void {
     console.log('Event clicked:', event);
-    // You can implement a modal or detailed view here
+    // Placeholder: open modal/details
   }
 
   onDayClick(day: CalendarDay): void {
     console.log('Day clicked:', day);
-    // You can implement day-specific actions here
-  }
-
-  getEventsForDay(date: Date): CalendarEvent[] {
-    return this.events.filter(event => 
-      date >= event.startDate && date <= event.endDate
-    );
-  }
-
-  getEventCountForDay(date: Date): number {
-    return this.getEventsForDay(date).length;
-  }
-
-  isWeekend(date: Date): boolean {
-    const day = date.getDay();
-    return day === 0 || day === 6; // Sunday or Saturday
-  }
-
-  getHolidaysForMonth(): CalendarEvent[] {
-    return this.events.filter(event => event.type === 'autres');
-  }
-
-  getLeaveRequestsForMonth(): CalendarEvent[] {
-    return this.events.filter(event => event.type !== 'autres');
+    // Placeholder: custom logic or modal
   }
 }

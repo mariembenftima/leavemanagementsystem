@@ -11,6 +11,4 @@ export class UsersRepository extends Repository<User> {
       dataSource.createQueryRunner(),
     );
   }
-
-  // Additional methods for user-specific queries can be added here
 }

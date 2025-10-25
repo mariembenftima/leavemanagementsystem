@@ -21,31 +21,21 @@
             <div id="profilePrintable">
               <div class="profile-card">
                 <div class="profile-image-container">
-                  <img
-                    [src]="employeeData.profilePictureUrl || 'assets/user.png'"
-                    alt="Profile"
-                    class="profile-image"
-                    (click)="changeProfileImage()"
-                  />
-                  <div
-                    class="status-indicator"
-                    [title]="employeeData.isActive ? 'Active Employee' : 'Inactive'"
-                  ></div>
+                  <img src="assets/default-profile.png" alt="Profile photo" class="profile-image"
+                    (click)="changeProfileImage()" />
+                  <div class="status-indicator" [title]="employeeData.isActive ? 'Active Employee' : 'Inactive'"></div>
                 </div>
 
                 <div class="profile-name">{{ employeeData.fullname }}</div>
                 <div class="profile-role text-uppercase">
                   {{ employeeData.roles }}
                 </div>
-                <div class="profile-id">{{ employeeData.employeeId }}</div>
+                <div class="profile-id">{{ employeeData.employee_id }}</div>
 
                 <div class="stats-grid">
                   <div class="stat-item">
                     <div class="stat-value">
-                      {{
-                        (new Date().getFullYear() -
-                          (employeeData.joinDate | date: 'yyyy')) || 0
-                      }}
+                      {{ this['getYearsOfExperience']() }}
                     </div>
                     <div class="stat-label">Years Experience</div>
                   </div>
@@ -73,11 +63,8 @@
               </h3>
 
               <div class="leave-items">
-                <div
-                  class="leave-item"
-                  *ngFor="let key of (leaveBalances | keyvalue)"
-                  (click)="viewLeaveDetails(key.key)"
-                >
+                <div class="leave-item" *ngFor="let key of (leaveBalances | keyvalue)"
+                  (click)="viewLeaveDetails(key.key)">
                   <div class="leave-header">
                     <span class="leave-type text-capitalize">{{ key.key }} Leave</span>
                     <div class="leave-numbers">
@@ -87,19 +74,16 @@
                       <span class="leave-badge badge-remaining">
                         Remaining:
                         {{
-                          (key.value.carryover + key.value.used) - key.value.used
+                        (key.value.carryover + key.value.used) - key.value.used
                         }}
                       </span>
                     </div>
                   </div>
                   <div class="progress-bar">
-                    <div
-                      class="progress-fill"
-                      [style.width]="
+                    <div class="progress-fill" [style.width]="
                         (key.value.used /
                           (key.value.carryover + key.value.used || 1)) * 100 + '%'
-                      "
-                    ></div>
+                      "></div>
                   </div>
                 </div>
               </div>
@@ -126,7 +110,7 @@
                 <div class="info-item">
                   <div class="info-label">Join Date</div>
                   <div class="info-value">
-                    {{ employeeData.joinDate | date: 'longDate' }}
+                    {{ employeeData.join_date | date: 'longDate' }}
                   </div>
                 </div>
                 <div class="info-item">
@@ -139,7 +123,7 @@
                 </div>
                 <div class="info-item">
                   <div class="info-label">Marital Status</div>
-                  <div class="info-value">{{ employeeData.maritalStatus }}</div>
+                  <div class="info-value">{{ employeeData.marital_status }}</div>
                 </div>
               </div>
             </div>
@@ -167,37 +151,14 @@
                 </div>
                 <div class="info-item">
                   <div class="info-label">Emergency Contact</div>
-                  <a
-                    [href]="'tel:' + employeeData.emergencyContactPhone"
-                    class="contact-info"
-                  >
+                  <a [href]="'tel:' + employeeData.emergency_contact_phone" class="contact-info">
                     <i class="fas fa-phone-alt"></i>
-                    {{ employeeData.emergencyContactPhone }}
+                    {{ employeeData.emergency_contact_phone }}
                   </a>
                 </div>
                 <div class="info-item">
                   <div class="info-label">Current Address</div>
                   <div class="info-value">{{ employeeData.address }}</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Recent Activity -->
-            <div class="info-card">
-              <h3 class="section-title">
-                <i class="fas fa-history"></i>
-                Recent Activity
-              </h3>
-              <div class="timeline-section" *ngIf="employeeData">
-                <div class="timeline">
-                  <div class="timeline-item">
-                    <div class="timeline-date">
-                      {{ employeeData.updatedAt | date: 'mediumDate' }}
-                    </div>
-                    <div class="timeline-event">
-                      Profile updated or reviewed
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -210,26 +171,22 @@
               </h3>
 
               <div class="filter-tabs">
-                <button class="filter-tab active" (click)="filterHolidays('all')">
+                <button class="filter-tab active" (click)="filterHolidays('all', $event)">
                   All
                 </button>
-                <button class="filter-tab" (click)="filterHolidays('upcoming')">
+                <button class="filter-tab" (click)="filterHolidays('upcoming', $event)">
                   Upcoming
                 </button>
-                <button class="filter-tab" (click)="filterHolidays('optional')">
+                <button class="filter-tab" (click)="filterHolidays('optional', $event)">
                   Optional
                 </button>
-                <button class="filter-tab" (click)="filterHolidays('national')">
+                <button class="filter-tab" (click)="filterHolidays('national', $event)">
                   National
                 </button>
               </div>
 
-              <div class="holidays-list">
-                <div
-                  class="holiday-item"
-                  *ngFor="let h of holidaysList"
-                  [attr.data-category]="h.type"
-                >
+              <div class="holidays-list" *ngIf="this['holidaysList']?.length">
+                <div class="holiday-item" *ngFor="let h of this['holidaysList']" [attr.data-category]="h.type">
                   <span class="holiday-emoji">🎉</span>
                   <div class="holiday-info">
                     <div class="holiday-name">{{ h.name }}</div>
@@ -244,10 +201,14 @@
 
       <!-- Loading/Error -->
       <ng-template #loadingOrError>
-        <div class="loading" *ngIf="isLoading">Loading profile...</div>
-        <div class="error" *ngIf="hasError">
-          Failed to load employee data. Please try again later.
-        </div>
+        <ng-container *ngIf="isLoading">
+          <div class="loading">Loading profile...</div>
+        </ng-container>
+        <ng-container *ngIf="hasError">
+          <div class="error">
+            Failed to load employee data. Please try again later.
+          </div>
+        </ng-container>
       </ng-template>
     </div>
   </div>
