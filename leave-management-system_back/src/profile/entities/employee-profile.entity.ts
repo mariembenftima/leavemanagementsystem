@@ -9,7 +9,6 @@ import {
   OneToMany,
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
-import { Gender } from '../types/enums/gender.enum';
 import { Activity } from './activity.entity';
 import { Performance } from './performance.entity';
 

@@ -16,7 +16,6 @@
         </div>
 
         <div class="profile-main" *ngIf="employeeData">
-          <!-- LEFT PANEL -->
           <div class="left-panel">
             <div id="profilePrintable">
               <div class="profile-card">
@@ -55,7 +54,6 @@
               </div>
             </div>
 
-            <!-- LEAVE BALANCE -->
             <div class="leave-summary" *ngIf="leaveBalances">
               <h3 class="section-title">
                 <i class="fas fa-calendar-alt"></i>
@@ -90,9 +88,7 @@
             </div>
           </div>
 
-          <!-- RIGHT PANEL -->
           <div class="right-panel">
-            <!-- Employee Information -->
             <div class="info-card">
               <h3 class="section-title">
                 <i class="fas fa-id-card"></i>
@@ -128,7 +124,6 @@
               </div>
             </div>
 
-            <!-- Contact Information -->
             <div class="info-card">
               <h3 class="section-title">
                 <i class="fas fa-address-book"></i>
@@ -163,7 +158,6 @@
               </div>
             </div>
 
-            <!-- Upcoming Holidays -->
             <div class="holidays-card">
               <h3 class="section-title">
                 <i class="fas fa-calendar-check"></i>
@@ -199,7 +193,6 @@
         </div>
       </div>
 
-      <!-- Loading/Error -->
       <ng-template #loadingOrError>
         <ng-container *ngIf="isLoading">
           <div class="loading">Loading profile...</div>

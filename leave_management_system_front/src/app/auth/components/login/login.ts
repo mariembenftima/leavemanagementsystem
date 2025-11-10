@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../private/services/auth.service';
 
 interface LoginCredentials {
@@ -31,32 +32,27 @@ export class login implements OnInit, OnDestroy {
     this.initializeForm();
   }
 
-  // UI State
+
   showSuccessPopup: boolean = false;
   showPassword: boolean = false;
   isLoading: boolean = false;
   showErrorToast: boolean = false;
   errorMessage: string = '';
 
-  // Authentication
   private currentUser: User | null = null;
   private errorTimeout: any;
 
   ngOnInit(): void {
-    // Clear any existing sessions
     this.clearUserSession();
   }
 
   ngOnDestroy(): void {
-    // Clear any pending timeouts
     if (this.errorTimeout) {
       clearTimeout(this.errorTimeout);
     }
   }
 
-  /**
-   * Initialize the reactive form with validation
-   */
+  
   private initializeForm(): void {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -65,9 +61,7 @@ export class login implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Handle form submission
-   */
+  
   onSubmit(): void {
     if (this.loginForm.invalid) {
       this.markFormGroupTouched();
@@ -83,9 +77,7 @@ export class login implements OnInit, OnDestroy {
     this.attemptLogin(formValues);
   }
 
-  /**
-   * Attempt to authenticate user
-   */
+  
   private async attemptLogin(
     credentials: LoginCredentials & { rememberMe: boolean }
   ): Promise<void> {
@@ -98,16 +90,23 @@ export class login implements OnInit, OnDestroy {
         password: credentials.password
       };
 
-      const response = await this.authService.login(loginRequest).toPromise();
-      
+      const response = await firstValueFrom(this.authService.login(loginRequest));
+
       if (response && response.success) {
+        const apiUser: any = response.data?.user || {};
+        const apiRoles = apiUser.roles as string | string[] | undefined;
+        const rolesArray = Array.isArray(apiRoles)
+          ? apiRoles
+          : typeof apiRoles === 'string' && apiRoles.length
+          ? apiRoles.split(',').map((r) => r.trim())
+          : [];
+
         this.currentUser = {
-          username: response.data.user.email,
-          role: response.data.user.roles[0] || 'EMPLOYEE',
+          username: apiUser.email || apiUser.username || '',
+          role: rolesArray[0] || 'EMPLOYEE',
           lastLogin: new Date(),
         };
-
-        // Handle remember me functionality
+        
         if (credentials.rememberMe) {
           this.saveUserSession(this.currentUser);
         }
@@ -128,76 +127,53 @@ export class login implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Toggle password visibility
-   */
+
   togglePassword(): void {
     this.showPassword = !this.showPassword;
   }
 
-  /**
-   * Handle forgot password
-   */
   onForgotPassword(event: Event): void {
     event.preventDefault();
     console.log('Forgot password clicked');
 
-    // You can implement forgot password logic here
-    // For now, just show an alert
     alert('Please contact your system administrator to reset your password.');
   }
 
-  /**
-   * Close success popup and redirect
-   */
+ 
   closePopup(): void {
     this.showSuccessPopup = false;
     this.redirectToDashboard();
   }
 
-  /**
-   * Continue to dashboard
-   */
+
   continueToDashboard(): void {
     this.showSuccessPopup = false;
     this.redirectToDashboard();
   }
 
-  /**
-   * Redirect to dashboard with user context
-   */
   private redirectToDashboard(): void {
     console.log('Redirecting to dashboard...');
-    let currentUserRole = this.authService.getCurrentUser();
-    console.log('currentUserRole', currentUserRole);
-    if(currentUserRole?.roles.includes('ADMIN')){ 
-      this.router.navigate(['/admin/dashboard'], {
-        state: { user: this.currentUser },
-      });
-      } else {
-        this.router.navigate(['/dashboard'], {
-        state: { user: this.currentUser },
-      });
-      }
+    // Use AuthService.hasRole to handle both array and string role formats
+    if (this.authService.hasRole('ADMIN')) {
+      this.router.navigate(['/admin/dashboard'], { state: { user: this.currentUser } });
+    } else {
+      this.router.navigate(['/dashboard'], { state: { user: this.currentUser } });
+    }
     
   }
 
-  /**
-   * Show error message
-   */
+  
   private showError(message: string): void {
     this.errorMessage = message;
     this.showErrorToast = true;
 
-    // Auto dismiss after 5 seconds
+
     this.errorTimeout = setTimeout(() => {
       this.dismissError();
     }, 5000);
   }
 
-  /**
-   * Dismiss error toast
-   */
+ 
   dismissError(): void {
     this.showErrorToast = false;
     this.errorMessage = '';
@@ -208,9 +184,7 @@ export class login implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Mark all form fields as touched to show validation errors
-   */
+  
   private markFormGroupTouched(): void {
     Object.keys(this.loginForm.controls).forEach((key) => {
       const control = this.loginForm.get(key);
@@ -220,9 +194,7 @@ export class login implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Add shake animation to login card
-   */
+
   private shakeLoginCard(): void {
     const loginCard = document.querySelector('.login-card') as HTMLElement;
     if (loginCard) {
@@ -233,9 +205,7 @@ export class login implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Save user session for remember me functionality
-   */
+ 
   private saveUserSession(user: User): void {
     try {
       const sessionData = {
@@ -249,9 +219,7 @@ export class login implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Clear user session
-   */
+ 
   private clearUserSession(): void {
     try {
       localStorage.removeItem('hrms_session');
@@ -260,21 +228,13 @@ export class login implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Utility method to create delay
-   */
+ 
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  /**
-   * Check if running in development mode
-   */
-  private isDevelopmentMode(): boolean {
-    return !environment.production;
-  }
 
-  // Getters for template
+
   get email(): string {
     return this.loginForm.get('email')?.value || '';
   }
@@ -319,9 +279,7 @@ export class login implements OnInit, OnDestroy {
     return errors;
   }
 
-  /**
-   * Get current time formatted for display
-   */
+  
   getCurrentTime(): string {
     return new Date().toLocaleString('en-US', {
       year: 'numeric',
@@ -333,16 +291,11 @@ export class login implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Get user's browser information
-   */
   getBrowserInfo(): string {
     return navigator.userAgent.split(' ')[0] || 'Unknown Browser';
   }
 
-  /**
-   * Check if user has remember me session
-   */
+
   hasRememberedSession(): boolean {
     try {
       const sessionData = localStorage.getItem('hrms_session');
@@ -357,9 +310,6 @@ export class login implements OnInit, OnDestroy {
     return false;
   }
 
-  /**
-   * Auto-login from remembered session
-   */
   autoLoginFromSession(): void {
     if (this.hasRememberedSession()) {
       try {
@@ -376,5 +326,4 @@ export class login implements OnInit, OnDestroy {
   }
 }
 
-// Add environment import (you may need to adjust the path)
 declare const environment: { production: boolean };

@@ -2,173 +2,110 @@
 
 <div class="app-shell">
   <app-user-side-bar></app-user-side-bar>
-  
+
   <div class="app-container">
     <div class="analytics-header">
       <div class="header-content">
         <h1 class="page-title">📊 Leave Analytics</h1>
-        <p class="page-subtitle">Comprehensive insights into leave patterns and trends</p>
+        <p class="page-subtitle">Comprehensive insights into company-wide leave patterns and trends</p>
       </div>
-      
+
       <div class="header-controls">
         <div class="filter-group">
           <select class="filter-select" [(ngModel)]="selectedTimeRange" (change)="onTimeRangeChange()">
             <option value="6months">Last 6 Months</option>
-            <option value="12months">Last 12 Months</option>
+            <option value="12months" selected>Last 12 Months</option>
             <option value="2years">Last 2 Years</option>
           </select>
-          
+
           <select class="filter-select" [(ngModel)]="selectedDepartment" (change)="onDepartmentChange()">
             <option value="all">All Departments</option>
-            <option value="engineering">Engineering</option>
-            <option value="marketing">Marketing</option>
-            <option value="sales">Sales</option>
-            <option value="hr">HR</option>
-            <option value="finance">Finance</option>
+            <option *ngFor="let dept of departmentStats" [value]="dept.department">
+              {{ dept.department }}
+            </option>
           </select>
         </div>
-        
+
         <div class="action-buttons">
           <button class="btn btn-secondary" (click)="refreshData()" [disabled]="isLoading">
-            <i class="fas fa-sync-alt" [class.spinning]="isLoading"></i>
-            Refresh
+            <i class="fas fa-sync-alt" [class.spinning]="isLoading"></i> Refresh
           </button>
           <button class="btn btn-primary" (click)="exportData()">
-            <i class="fas fa-download"></i>
-            Export
+            <i class="fas fa-download"></i> Export
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="stats-grid">
+    <div *ngIf="isLoading" class="loading-overlay">
+      <div class="spinner"></div>
+      <p>Loading analytics data...</p>
+    </div>
+    <div *ngIf="!isLoading" class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon">
-          <i class="fas fa-clipboard-list"></i>
-        </div>
+        <div class="stat-icon"><i class="fas fa-clipboard-list"></i></div>
         <div class="stat-content">
           <h3 class="stat-number">{{ totalStats.totalRequests }}</h3>
           <p class="stat-label">Total Requests</p>
-          <div class="stat-change positive">
-            <i class="fas fa-arrow-up"></i>
-            +12% from last month
-          </div>
         </div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon approved">
-          <i class="fas fa-check-circle"></i>
-        </div>
+        <div class="stat-icon approved"><i class="fas fa-check-circle"></i></div>
         <div class="stat-content">
           <h3 class="stat-number">{{ totalStats.approvedRequests }}</h3>
           <p class="stat-label">Approved</p>
-          <div class="stat-change positive">
-            <i class="fas fa-arrow-up"></i>
-            {{ (totalStats.approvedRequests / totalStats.totalRequests * 100).toFixed(1) }}% approval rate
-          </div>
+          <p class="stat-sub">{{ (totalStats.approvedRequests / totalStats.totalRequests * 100) | number:'1.0-1' }}% approved</p>
         </div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon pending">
-          <i class="fas fa-clock"></i>
-        </div>
+        <div class="stat-icon pending"><i class="fas fa-clock"></i></div>
         <div class="stat-content">
           <h3 class="stat-number">{{ totalStats.pendingRequests }}</h3>
           <p class="stat-label">Pending</p>
-          <div class="stat-change neutral">
-            <i class="fas fa-minus"></i>
-            {{ (totalStats.pendingRequests / totalStats.totalRequests * 100).toFixed(1) }}% pending rate
-          </div>
+          <p class="stat-sub">{{ (totalStats.pendingRequests / totalStats.totalRequests * 100) | number:'1.0-1' }}% pending</p>
         </div>
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon rejected">
-          <i class="fas fa-times-circle"></i>
-        </div>
+        <div class="stat-icon rejected"><i class="fas fa-times-circle"></i></div>
         <div class="stat-content">
           <h3 class="stat-number">{{ totalStats.rejectedRequests }}</h3>
           <p class="stat-label">Rejected</p>
-          <div class="stat-change negative">
-            <i class="fas fa-arrow-down"></i>
-            {{ (totalStats.rejectedRequests / totalStats.totalRequests * 100).toFixed(1) }}% rejection rate
-          </div>
+          <p class="stat-sub">{{ (totalStats.rejectedRequests / totalStats.totalRequests * 100) | number:'1.0-1' }}% rejected</p>
         </div>
       </div>
     </div>
 
-    <!-- Charts Section -->
-    <div class="charts-grid">
-      <!-- Leave Trends Chart -->
+    <div *ngIf="!isLoading" class="charts-grid">
       <div class="chart-card">
         <div class="chart-header">
           <h3 class="chart-title">📈 Leave Trends</h3>
-          <div class="chart-legend">
-            <div class="legend-item">
-              <div class="legend-color approved"></div>
-              <span>Approved</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-color pending"></div>
-              <span>Pending</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-color rejected"></div>
-              <span>Rejected</span>
-            </div>
-          </div>
         </div>
         <div class="chart-container">
-          <div class="chart-placeholder">
-            <i class="fas fa-chart-line"></i>
-            <h4>Leave Trends Chart</h4>
-            <p>Chart visualization will be implemented here</p>
-          </div>
+          <canvas id="leaveTrendsChart"></canvas>
         </div>
       </div>
 
-      <!-- Department Comparison Chart -->
       <div class="chart-card">
         <div class="chart-header">
           <h3 class="chart-title">🏢 Department Analysis</h3>
-          <div class="chart-legend">
-            <div class="legend-item">
-              <div class="legend-color total"></div>
-              <span>Total</span>
-            </div>
-            <div class="legend-item">
-              <div class="legend-color approved"></div>
-              <span>Approved</span>
-            </div>
-          </div>
         </div>
         <div class="chart-container">
-          <div class="chart-placeholder">
-            <i class="fas fa-chart-bar"></i>
-            <h4>Department Analysis Chart</h4>
-            <p>Chart visualization will be implemented here</p>
-          </div>
+          <canvas id="departmentChart"></canvas>
         </div>
       </div>
 
-      <!-- Seasonal Patterns Chart -->
       <div class="chart-card">
         <div class="chart-header">
           <h3 class="chart-title">🗓️ Seasonal Distribution</h3>
         </div>
         <div class="chart-container">
-          <div class="chart-placeholder">
-            <i class="fas fa-chart-pie"></i>
-            <h4>Seasonal Patterns Chart</h4>
-            <p>Chart visualization will be implemented here</p>
-          </div>
+          <canvas id="seasonalChart"></canvas>
         </div>
       </div>
 
-      <!-- Department Performance Table -->
       <div class="chart-card table-card">
         <div class="chart-header">
           <h3 class="chart-title">📋 Department Performance</h3>
@@ -178,27 +115,22 @@
             <thead>
               <tr>
                 <th>Department</th>
-                <th>Total Leaves</th>
+                <th>Total</th>
                 <th>Approved</th>
                 <th>Pending</th>
                 <th>Avg Days</th>
-                <th>Approval Rate</th>
+                <th>Approval %</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let dept of departmentStats">
-                <td class="dept-name">{{ dept.department }}</td>
+                <td>{{ dept.department }}</td>
                 <td>{{ dept.totalLeaves }}</td>
                 <td class="approved-count">{{ dept.approvedLeaves }}</td>
                 <td class="pending-count">{{ dept.pendingLeaves }}</td>
-                <td>{{ dept.averageDays }}</td>
+                <td>{{ dept.averageDays | number:'1.1-1' }}</td>
                 <td>
-                  <div class="approval-rate">
-                    <div class="rate-bar">
-                      <div class="rate-fill" [style.width.%]="(dept.approvedLeaves / dept.totalLeaves * 100)"></div>
-                    </div>
-                    <span class="rate-text">{{ (dept.approvedLeaves / dept.totalLeaves * 100).toFixed(1) }}%</span>
-                  </div>
+                  {{ (dept.approvedLeaves / dept.totalLeaves * 100) | number:'1.0-1' }}%
                 </td>
               </tr>
             </tbody>
@@ -207,47 +139,46 @@
       </div>
     </div>
 
-    <!-- Insights Section -->
-    <div class="insights-section">
+    <div *ngIf="!isLoading" class="insights-section">
       <h3 class="insights-title">🔍 Key Insights</h3>
       <div class="insights-grid">
         <div class="insight-card">
-          <div class="insight-icon">
-            <i class="fas fa-trending-up"></i>
-          </div>
+          <div class="insight-icon"><i class="fas fa-trending-up"></i></div>
           <div class="insight-content">
             <h4>Peak Season</h4>
-            <p>Q2 (Apr-Jun) shows the highest leave requests with 34% of annual leaves, likely due to summer vacation planning.</p>
+            
           </div>
         </div>
 
         <div class="insight-card">
-          <div class="insight-icon">
-            <i class="fas fa-users"></i>
-          </div>
+          <div class="insight-icon"><i class="fas fa-users"></i></div>
           <div class="insight-content">
             <h4>Top Department</h4>
-            <p>Engineering leads with 156 total requests, maintaining a 91% approval rate and 3.2 days average leave duration.</p>
+            <p>
+             
+            </p>
           </div>
         </div>
 
         <div class="insight-card">
-          <div class="insight-icon">
-            <i class="fas fa-clock"></i>
-          </div>
+          <div class="insight-icon"><i class="fas fa-percentage"></i></div>
           <div class="insight-content">
-            <h4>Processing Time</h4>
-            <p>Average processing time is 2.3 days, with 91% approval rate indicating efficient workflow management.</p>
+            <h4>Approval Efficiency</h4>
+            <p>
+              {{ (totalStats.approvedRequests / totalStats.totalRequests * 100) | number:'1.0-1' }}%
+              company-wide approval rate.
+            </p>
           </div>
         </div>
 
         <div class="insight-card">
-          <div class="insight-icon">
-            <i class="fas fa-calendar-alt"></i>
-          </div>
+          <div class="insight-icon"><i class="fas fa-calendar-alt"></i></div>
           <div class="insight-content">
-            <h4>Seasonal Pattern</h4>
-            <p>Leave requests are evenly distributed across quarters, with slight peaks in Q2 and Q4 for holiday seasons.</p>
+            <h4>Requests Distribution</h4>
+            <p>
+              Total of {{ totalStats.totalRequests }} requests across
+              {{ departmentStats.length }} departments analyzed.
+            </p>
           </div>
         </div>
       </div>

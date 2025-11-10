@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService } from '../../private/services/api.service';
@@ -13,7 +13,7 @@ import { Team } from '../../types/team.model';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule]
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   registerForm: FormGroup;
   isLoading = false;
   errorMessage = '';
@@ -21,13 +21,15 @@ export class RegisterComponent {
   selectedFile: File | null = null;
   profilePicturePreview: string | null = null;
 
-  teams : Team[] = []
+  teams: Team[] = [];
+
   constructor(
     private formBuilder: FormBuilder,
     private apiService: ApiService,
     private authService: AuthService,
     private router: Router
   ) {
+
     this.registerForm = this.formBuilder.group({
       username: ['', [Validators.required, Validators.minLength(3)]],
       fullname: ['', [Validators.required, Validators.minLength(2)]],
@@ -35,7 +37,7 @@ export class RegisterComponent {
       phoneNumber: ['', [Validators.required, Validators.pattern(/^\+?[\d\s\-\(\)]+$/)]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', [Validators.required]],
-      teamId: ['', [Validators.required, Validators.min(1), Validators.max(8)]],
+      teamId: ['', [Validators.required]],  // teamId is required
       address: [''],
       dateOfBirth: [''],
       bio: ['']
@@ -43,6 +45,13 @@ export class RegisterComponent {
       validators: this.passwordMatchValidator
     });
   }
+
+ngOnInit() {
+  this.apiService.getTeams().subscribe({
+    next: (teams) => this.teams = teams,
+    error: (err) => console.error('Error fetching teams', err)
+  });
+}
 
   passwordMatchValidator(form: FormGroup) {
     const password = form.get('password');
@@ -58,7 +67,7 @@ export class RegisterComponent {
 
   async onSubmit() {
     if (this.registerForm.invalid) {
-      this.markFormGroupTouched(this.registerForm);
+      this.markFormGroupTouched(this.registerForm);  
       return;
     }
 
@@ -67,22 +76,20 @@ export class RegisterComponent {
     this.successMessage = '';
 
     try {
-      // Create FormData for file upload
       const formData = new FormData();
       
-      // Add all form fields
       Object.keys(this.registerForm.value).forEach(key => {
         if (key !== 'confirmPassword' && this.registerForm.value[key]) {
           formData.append(key, this.registerForm.value[key]);
         }
       });
 
-      // Ensure teamId is sent as a number
+      
       if (this.registerForm.value.teamId) {
         formData.set('teamId', this.registerForm.value.teamId.toString());
       }
 
-      // Add profile picture if selected
+      
       if (this.selectedFile) {
         formData.append('profilePicture', this.selectedFile);
       }
@@ -91,13 +98,10 @@ export class RegisterComponent {
       
       if (response.success) {
         this.successMessage = 'Registration successful! Redirecting to dashboard...';
-        
-        // Store user data for login
+
         if (response.user) {
           this.authService.setCurrentUser(response.user);
         }
-        
-        // Redirect after a short delay
         setTimeout(() => {
           this.router.navigate(['/dashboard']);
         }, 2000);
@@ -141,14 +145,6 @@ export class RegisterComponent {
       return 'Passwords do not match';
     }
     
-    if (field?.hasError('min')) {
-      return 'Please select a valid department';
-    }
-    
-    if (field?.hasError('max')) {
-      return 'Please select a valid department';
-    }
-    
     return '';
   }
 
@@ -168,17 +164,14 @@ export class RegisterComponent {
   goToLogin() {
     this.router.navigate(['/login']);
   }
-
   onFileSelected(event: any) {
     const file = event.target.files[0];
     if (file) {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         this.errorMessage = 'Please select a valid image file';
         return;
       }
 
-      // Validate file size (5MB limit)
       if (file.size > 5 * 1024 * 1024) {
         this.errorMessage = 'File size must be less than 5MB';
         return;
@@ -187,7 +180,6 @@ export class RegisterComponent {
       this.selectedFile = file;
       this.errorMessage = '';
 
-      // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
         this.profilePicturePreview = e.target?.result as string;
@@ -196,10 +188,10 @@ export class RegisterComponent {
     }
   }
 
+
   removeProfilePicture() {
     this.selectedFile = null;
     this.profilePicturePreview = null;
-    // Reset file input
     const fileInput = document.getElementById('profilePicture') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';

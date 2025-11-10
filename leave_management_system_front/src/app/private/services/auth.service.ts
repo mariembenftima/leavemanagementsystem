@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { tap, map } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { User } from '../../types/user.model';
@@ -27,40 +28,57 @@ export class AuthService {
   private apiUrl = environment.apiUrl;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
+  public isLoggedIn$: Observable<boolean> = this.currentUser$.pipe(map((u) => !!u));
 
   constructor(private http: HttpClient, private router: Router) {
     const token = localStorage.getItem('authToken');
     const user = localStorage.getItem('currentUser');
     if (token && user) {
-      this.currentUserSubject.next(JSON.parse(user));
+      try {
+        const parsed: any = JSON.parse(user);
+        // normalize roles to array
+        if (parsed && parsed.roles) {
+          if (typeof parsed.roles === 'string') {
+            parsed.roles = parsed.roles.split(',').map((r: string) => r.trim());
+          }
+        }
+        this.currentUserSubject.next(parsed as User);
+      } catch (err) {
+        console.warn('Failed to parse currentUser from storage', err);
+        this.currentUserSubject.next(null);
+      }
     }
   }
-
-  // 🔹 Login and store credentials
   login(credentials: LoginRequest): Observable<LoginResponse> {
     return this.http
       .post<LoginResponse>(`${this.apiUrl}/auth/login`, credentials)
       .pipe(
         tap((response) => {
           if (response.success && response.data.access_token) {
-            const user = response.data.user;
-            localStorage.setItem('authToken', response.data.access_token);
-            localStorage.setItem('currentUser', JSON.stringify(user));
-            this.currentUserSubject.next(user);
+            const user: any = response.data.user || {};
+            // normalize roles to array
+            if (user.roles && typeof user.roles === 'string') {
+              user.roles = user.roles.split(',').map((r: string) => r.trim());
+            }
+
+            try {
+              localStorage.setItem('authToken', response.data.access_token);
+              localStorage.setItem('currentUser', JSON.stringify(user));
+            } catch (err) {
+              console.warn('Failed to write auth data to storage', err);
+            }
+
+            this.currentUserSubject.next(user as User);
           }
         })
       );
   }
-
-  // 🔹 Logout and clear storage
   logout(): void {
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUser');
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
   }
-
-  // 🔹 Getters
   getCurrentUser(): User | null {
     return this.currentUserSubject.value;
   }
@@ -76,31 +94,30 @@ export class AuthService {
   isLoggedIn(): boolean {
     return !!this.getToken();
   }
-
-  // 🔹 Roles (string-based)
   hasRole(role: string): boolean {
     const user = this.getCurrentUser();
     if (!user || !user.roles) return false;
-    return user.roles.split(',').map((r) => r.trim()).includes(role);
+    if (Array.isArray(user.roles)) return user.roles.includes(role);
+    return (user.roles as string).split(',').map((r) => r.trim()).includes(role);
   }
 
   setCurrentUser(user: User): void {
     localStorage.setItem('currentUser', JSON.stringify(user));
     this.currentUserSubject.next(user);
   }
-
-  // 🔹 Helper to add headers for protected endpoints
   private authHeaders(): HttpHeaders {
     const token = this.getToken();
+    if (!token) return new HttpHeaders();
     return new HttpHeaders({
-      Authorization: token ? `Bearer ${token}` : '',
+      Authorization: `Bearer ${token}`,
     });
   }
-
-  // 🔹 Example API call using auth header
   getProfileFromServer(): Observable<User> {
-    return this.http.get<User>(`${this.apiUrl}/auth/profile`, {
+    // Backend exposes current user at GET /auth/me and returns { success, user, message }
+    return this.http.get<any>(`${this.apiUrl}/auth/me`, {
       headers: this.authHeaders(),
-    });
+    }).pipe(
+      map((res) => res.user as User)
+    );
   }
 }

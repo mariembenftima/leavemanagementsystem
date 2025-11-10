@@ -4,9 +4,27 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
+import { ConfigService } from '@nestjs/config';
+import express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const configService = app.get(ConfigService);
+  
+  // Security Middleware
+  app.use(helmet());
+  app.use(
+    rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 100, // limit each IP to 100 requests per windowMs
+    }),
+  );
+  
+  // Request size limits
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   
   // Serve static files for uploads
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
@@ -16,23 +34,13 @@ async function bootstrap() {
   // Enable CORS for frontend communication
   app.enableCors({
     origin: [
-      'http://localhost:4200', 
-      'http://localhost:4201',
-      'http://localhost:3000',
-      'http://localhost:3002', // Legacy frontend server port
-      'http://localhost:4300', // Current frontend server port
-      'http://127.0.0.1:4200',
-      'http://127.0.0.1:4201',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:3002', // Legacy frontend server port
-      'http://127.0.0.1:4300', // Current frontend server port
-      'file://',
-      'null' // For local file access
-    ], // Angular frontend URLs and local file access
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+      'http://localhost:4200',
+      'http://localhost:4300'
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-    optionsSuccessStatus: 200
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 3600
   });
   
   app.useGlobalPipes(

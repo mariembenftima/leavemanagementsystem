@@ -11,7 +11,6 @@ import { Holiday } from '../types/holiday.model';
   providedIn: 'root',
 })
 export class DataMapperService {
-  // ✅ Universal conversion between snake_case and camelCase
 
   private toCamelCase(obj: any): any {
     if (Array.isArray(obj)) {
@@ -39,7 +38,6 @@ export class DataMapperService {
     return obj;
   }
 
-  // 🧠 Public methods for mapping from API → Frontend model
   fromApi<T>(data: any): T {
     return this.toCamelCase(data);
   }
@@ -48,7 +46,6 @@ export class DataMapperService {
     return this.toCamelCase(data);
   }
 
-  // 🔄 Public methods for mapping Frontend → API (before sending to backend)
   toApi<T>(data: T): any {
     return this.toSnakeCase(data);
   }
@@ -57,7 +54,6 @@ export class DataMapperService {
     return this.toSnakeCase(data);
   }
 
-  // 📋 Example-specific helpers (optional, for clarity)
 
   mapUser(data: any): User {
     return this.fromApi<User>(data);

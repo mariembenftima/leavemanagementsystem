@@ -100,7 +100,11 @@ export class AuthService {
       await this.createInitialLeaveBalances(newUser.id);
 
       // Generate JWT token for immediate login
-      const payload = { sub: newUser.id, email: newUser.email, roles: newUser.roles };
+      const payload = {
+        sub: newUser.id,
+        email: newUser.email,
+        roles: newUser.roles,
+      };
       const access_token = this.jwtService.sign(payload);
 
       return {
@@ -141,7 +145,10 @@ export class AuthService {
 
       console.log(`✅ Created initial leave balances for user ${userId}`);
     } catch (error) {
-      console.error(`❌ Failed to create leave balances for user ${userId}:`, error.message);
+      console.error(
+        `❌ Failed to create leave balances for user ${userId}:`,
+        error.message,
+      );
       // Don't throw error here to avoid failing registration
     }
   }

@@ -1,5 +1,3 @@
-// types/user/profileType/employee-profile-data.type.ts
-
 export interface EmployeeProfileData {
   id: string;
   user_id: string;
@@ -22,7 +20,7 @@ export interface EmployeeProfileData {
   bank_name: string;
   profile_picture_url?: string;
   roles: string;
-  team_name?: string; // joined from teams.name
+  team_name?: string; 
   created_at: string;
   updated_at: string;
   isActive: boolean;

@@ -8,6 +8,7 @@ import { LeaveBalance } from '../../../../types/leave-balance.model';
 import { DataMapperService } from '../../../../helpers/data-mapper.service';
 import { HttpClient } from '@angular/common/http';
 import { LeaveSummary } from '../../../../types/leave-summary.type';
+import { ApiService } from '../../../services/api.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -22,19 +23,18 @@ export class Dashboard implements OnInit {
 
   constructor(
     private http: HttpClient,
-    private mapper: DataMapperService
+    private mapper: DataMapperService,
+    private apiService: ApiService
   ) {}
 
   ngOnInit(): void {
     this.loadDashboardData();
   }
 
-  // 🔹 Fetch dashboard data directly from your backend API
   private loadDashboardData(): void {
-    this.http.get('/api/dashboard').subscribe({
-      next: (res: any) => {
-        // Automatically convert snake_case → camelCase
-        this.dashboardData = this.mapper.fromApi<DashboardData>(res);
+    this.apiService.getDashboardData().subscribe({
+      next: (data) => {
+        this.dashboardData = data;
         this.isLoading = false;
       },
       error: (err) => {
@@ -45,7 +45,6 @@ export class Dashboard implements OnInit {
     });
   }
 
-  // 🔸 Template accessors
   get employee(): EmployeeProfileData | undefined {
     return this.dashboardData?.employeeInfo;
   }

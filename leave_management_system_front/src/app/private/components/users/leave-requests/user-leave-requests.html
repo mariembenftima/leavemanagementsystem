@@ -16,7 +16,6 @@
           (ngSubmit)="onSubmit()"
           class="leave-form fade-in"
         >
-          <!-- Employee Information Section -->
           <div class="form-section">
             <h3 class="section-title">Employee Information</h3>
             <div class="employee-info-card slide-in">
@@ -35,7 +34,6 @@
             </div>
           </div>
 
-          <!-- Leave Details Section -->
           <div class="form-section">
             <h3 class="section-title">Leave Details</h3>
             
@@ -153,7 +151,6 @@
             </div>
           </div>
 
-          <!-- Leave Summary -->
           <div class="form-section" *ngIf="getSelectedLeaveType() && calculateTotalDays() > 0">
             <h3 class="section-title">Leave Summary</h3>
             <div class="leave-summary slide-in">
@@ -174,7 +171,6 @@
             </div>
           </div>
 
-          <!-- File Upload Section -->
           <div class="form-section">
             <h3 class="section-title">Attachments (Optional)</h3>
             
@@ -199,7 +195,6 @@
               class="sr-only"
             />
 
-            <!-- File List -->
             <div class="file-list" *ngIf="attachedFiles.length > 0">
               <div class="file-item fade-in" *ngFor="let file of attachedFiles; let i = index">
                 <div class="file-info">
@@ -221,7 +216,6 @@
             </div>
           </div>
 
-          <!-- Validation Summary -->
           <div class="validation-summary" *ngIf="hasFormErrors">
             <h4>Please fix the following errors:</h4>
             <ul>
@@ -233,7 +227,6 @@
             </ul>
           </div>
 
-          <!-- Form Actions -->
           <div class="form-actions">
             <button
               type="button"

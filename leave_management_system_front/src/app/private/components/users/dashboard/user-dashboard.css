@@ -1,5 +1,4 @@
 
-/* Dashboard with consistent styling */
 .dashboard-main {
 	display: flex !important;
 	min-height: 100vh !important;
@@ -20,7 +19,6 @@
 	margin-right: auto !important;
 }
 
-/* Loading States */
 .loading-container {
 	display: flex !important;
 	flex-direction: column !important;
@@ -50,7 +48,6 @@
 	font-size: 1rem !important;
 }
 
-/* Error States */
 .error-container {
 	display: flex !important;
 	align-items: center !important;
@@ -138,7 +135,6 @@
 	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
 }
 
-/* User Information Grid Styling */
 .user-info-grid {
 	display: grid !important;
 	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)) !important;

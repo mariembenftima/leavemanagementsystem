@@ -10,26 +10,20 @@
       <div class="form-row">
         <div class="form-group">
           <label for="username">Username *</label>
-          <input 
-            type="text" 
-            id="username" 
-            formControlName="username"
-            placeholder="Enter your username"
+          <input type="text" id="username" formControlName="username" placeholder="Enter your username"
             [class.error]="registerForm.get('username')?.invalid && registerForm.get('username')?.touched">
-          <div class="error-message" *ngIf="registerForm.get('username')?.invalid && registerForm.get('username')?.touched">
+          <div class="error-message"
+            *ngIf="registerForm.get('username')?.invalid && registerForm.get('username')?.touched">
             {{ getErrorMessage('username') }}
           </div>
         </div>
 
         <div class="form-group">
           <label for="fullname">Full Name *</label>
-          <input 
-            type="text" 
-            id="fullname" 
-            formControlName="fullname"
-            placeholder="Enter your full name"
+          <input type="text" id="fullname" formControlName="fullname" placeholder="Enter your full name"
             [class.error]="registerForm.get('fullname')?.invalid && registerForm.get('fullname')?.touched">
-          <div class="error-message" *ngIf="registerForm.get('fullname')?.invalid && registerForm.get('fullname')?.touched">
+          <div class="error-message"
+            *ngIf="registerForm.get('fullname')?.invalid && registerForm.get('fullname')?.touched">
             {{ getErrorMessage('fullname') }}
           </div>
         </div>
@@ -38,11 +32,7 @@
       <div class="form-row">
         <div class="form-group">
           <label for="email">Email Address *</label>
-          <input 
-            type="email" 
-            id="email" 
-            formControlName="email"
-            placeholder="Enter your email"
+          <input type="email" id="email" formControlName="email" placeholder="Enter your email"
             [class.error]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched">
           <div class="error-message" *ngIf="registerForm.get('email')?.invalid && registerForm.get('email')?.touched">
             {{ getErrorMessage('email') }}
@@ -51,13 +41,10 @@
 
         <div class="form-group">
           <label for="phoneNumber">Phone Number *</label>
-          <input 
-            type="tel" 
-            id="phoneNumber" 
-            formControlName="phoneNumber"
-            placeholder="Enter your phone number"
+          <input type="tel" id="phoneNumber" formControlName="phoneNumber" placeholder="Enter your phone number"
             [class.error]="registerForm.get('phoneNumber')?.invalid && registerForm.get('phoneNumber')?.touched">
-          <div class="error-message" *ngIf="registerForm.get('phoneNumber')?.invalid && registerForm.get('phoneNumber')?.touched">
+          <div class="error-message"
+            *ngIf="registerForm.get('phoneNumber')?.invalid && registerForm.get('phoneNumber')?.touched">
             {{ getErrorMessage('phoneNumber') }}
           </div>
         </div>
@@ -66,26 +53,21 @@
       <div class="form-row">
         <div class="form-group">
           <label for="password">Password *</label>
-          <input 
-            type="password" 
-            id="password" 
-            formControlName="password"
-            placeholder="Enter your password"
+          <input type="password" id="password" formControlName="password" placeholder="Enter your password"
             [class.error]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched">
-          <div class="error-message" *ngIf="registerForm.get('password')?.invalid && registerForm.get('password')?.touched">
+          <div class="error-message"
+            *ngIf="registerForm.get('password')?.invalid && registerForm.get('password')?.touched">
             {{ getErrorMessage('password') }}
           </div>
         </div>
 
         <div class="form-group">
           <label for="confirmPassword">Confirm Password *</label>
-          <input 
-            type="password" 
-            id="confirmPassword" 
-            formControlName="confirmPassword"
+          <input type="password" id="confirmPassword" formControlName="confirmPassword"
             placeholder="Confirm your password"
             [class.error]="registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched">
-          <div class="error-message" *ngIf="registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched">
+          <div class="error-message"
+            *ngIf="registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched">
             {{ getErrorMessage('confirmPassword') }}
           </div>
         </div>
@@ -93,11 +75,9 @@
 
       <div class="form-group">
         <label for="teamId">Department/Team *</label>
-        <select 
-          id="teamId" 
-          formControlName="teamId"
+        <select id="teamId" formControlName="teamId"
           [class.error]="registerForm.get('teamId')?.invalid && registerForm.get('teamId')?.touched">
-          <option value="">Select your department</option>
+          <option value="" disabled>Select your department</option>
           <option *ngFor="let team of teams" [value]="team.id">{{ team.name }}</option>
         </select>
         <div class="error-message" *ngIf="registerForm.get('teamId')?.invalid && registerForm.get('teamId')?.touched">
@@ -105,43 +85,30 @@
         </div>
       </div>
 
+
+
+
       <div class="form-row">
         <div class="form-group">
           <label for="dateOfBirth">Date of Birth</label>
-          <input 
-            type="date" 
-            id="dateOfBirth" 
-            formControlName="dateOfBirth">
+          <input type="date" id="dateOfBirth" formControlName="dateOfBirth">
         </div>
 
         <div class="form-group">
           <label for="address">Address</label>
-          <input 
-            type="text" 
-            id="address" 
-            formControlName="address"
-            placeholder="Enter your address">
+          <input type="text" id="address" formControlName="address" placeholder="Enter your address">
         </div>
       </div>
 
       <div class="form-group">
         <label for="bio">Bio (Optional)</label>
-        <textarea 
-          id="bio" 
-          formControlName="bio"
-          placeholder="Tell us a bit about yourself"
-          rows="3"></textarea>
+        <textarea id="bio" formControlName="bio" placeholder="Tell us a bit about yourself" rows="3"></textarea>
       </div>
 
       <div class="form-group">
         <label for="profilePicture">Profile Picture (Optional)</label>
         <div class="file-upload-container">
-          <input 
-            type="file" 
-            id="profilePicture" 
-            (change)="onFileSelected($event)"
-            accept="image/*"
-            class="file-input"
+          <input type="file" id="profilePicture" (change)="onFileSelected($event)" accept="image/*" class="file-input"
             #fileInput>
           <div class="file-upload-display" (click)="fileInput.click()">
             <div *ngIf="!selectedFile && !profilePicturePreview" class="upload-placeholder">
@@ -150,7 +117,8 @@
             </div>
             <div *ngIf="profilePicturePreview" class="image-preview">
               <img [src]="profilePicturePreview" alt="Profile preview" class="preview-image">
-              <button type="button" (click)="removeProfilePicture(); $event.stopPropagation()" class="remove-image">×</button>
+              <button type="button" (click)="removeProfilePicture(); $event.stopPropagation()"
+                class="remove-image">×</button>
             </div>
           </div>
         </div>
@@ -165,17 +133,14 @@
         {{ successMessage }}
       </div>
 
-      <button 
-        type="submit" 
-        class="register-btn"
-        [disabled]="isLoading || registerForm.invalid">
+      <button type="submit" class="register-btn" [disabled]="isLoading || registerForm.invalid">
         <span *ngIf="isLoading" class="spinner"></span>
         {{ isLoading ? 'Creating Account...' : 'Create Account' }}
       </button>
     </form>
 
     <div class="footer">
-      <p>Already have an account? 
+      <p>Already have an account?
         <a href="#" (click)="goToLogin()" class="login-link">Sign in here</a>
       </p>
     </div>

@@ -33,27 +33,21 @@ interface FilterOptions {
   styleUrls: ['./user-approves.css'],
 })
 export class UserApproves implements OnInit {
-  // Leave statistics data
   leaveStats: LeaveStatistic[] = [];
 
-  // Leave allowance and usage data
   leaveAllowance = 0;
   leaveUsed = 0;
 
-  // Leave requests data
   leaveRequests: LeaveRequest[] = [];
 
-  // Filtered requests
   filteredRequests: LeaveRequest[] = [];
 
-  // Filter options
   filters: FilterOptions = {
     leaveType: 'all',
     status: 'all',
     dateRange: 'all',
   };
 
-  // Dropdown options
   leaveTypes = [
     'All Types',
     'Annual Leave',
@@ -64,7 +58,6 @@ export class UserApproves implements OnInit {
   statusOptions = ['All Status', 'Approved', 'Pending', 'Declined'];
   dateRangeOptions = ['All Dates', 'This Week', 'This Month', 'Last 30 Days'];
 
-  // UI state
   showFilters = false;
   sortColumn = '';
   sortDirection: 'asc' | 'desc' = 'asc';
@@ -108,7 +101,6 @@ export class UserApproves implements OnInit {
   }
 
   private loadLeaveStatistics(): void {
-    // Calculate statistics from leave requests
     const approved = this.leaveRequests.filter(r => r.status === 'Approved').length;
     const pending = this.leaveRequests.filter(r => r.status === 'Pending').length;
     const declined = this.leaveRequests.filter(r => r.status === 'Declined').length;
@@ -203,7 +195,6 @@ export class UserApproves implements OnInit {
     }
   }
 
-  // Filter methods
   applyFilters(): void {
     this.filteredRequests = this.leaveRequests.filter((request) => {
       const matchesType =
@@ -215,7 +206,6 @@ export class UserApproves implements OnInit {
         this.filters.status === 'all' ||
         request.status.toLowerCase() === this.filters.status.toLowerCase();
 
-      // Simple date range filtering (you can enhance this with actual date comparison)
       const matchesDateRange = this.filters.dateRange === 'all' || true; // Placeholder logic
 
       return matchesType && matchesStatus && matchesDateRange;
@@ -241,7 +231,6 @@ export class UserApproves implements OnInit {
     this.showFilters = !this.showFilters;
   }
 
-  // Sorting methods
   sortBy(column: string): void {
     if (this.sortColumn === column) {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
@@ -281,14 +270,12 @@ export class UserApproves implements OnInit {
     }
   }
 
-  // Action methods
   approveAllPending(): void {
     const pendingRequests = this.leaveRequests.filter(
       (req) => req.status === 'Pending'
     );
     pendingRequests.forEach((req) => (req.status = 'Approved'));
 
-    // Update statistics
     const approvedStat = this.leaveStats.find(
       (stat) => stat.type === 'Approved'
     );
@@ -346,7 +333,6 @@ export class UserApproves implements OnInit {
     return csvRows.join('\n');
   }
 
-  // Selection methods
   toggleRequestSelection(requestId: string): void {
     const index = this.selectedRequests.indexOf(requestId);
     if (index > -1) {
@@ -368,7 +354,6 @@ export class UserApproves implements OnInit {
     }
   }
 
-  // Status change methods
   changeRequestStatus(
     requestId: string,
     newStatus: 'Approved' | 'Pending' | 'Declined'
@@ -378,7 +363,6 @@ export class UserApproves implements OnInit {
       const oldStatus = request.status;
       request.status = newStatus;
 
-      // Update statistics
       this.updateStatistics(oldStatus, newStatus);
       this.applyFilters();
 
@@ -396,7 +380,6 @@ export class UserApproves implements OnInit {
     if (newStat) newStat.count += 1;
   }
 
-  // Utility methods
   getStatusClass(status: string): string {
     switch (status.toLowerCase()) {
       case 'approved':
@@ -420,16 +403,13 @@ export class UserApproves implements OnInit {
     return this.leaveAllowance - this.leaveUsed;
   }
 
-  // Action menu methods
   showActionMenu(event: Event, requestId: string): void {
     event.stopPropagation();
     console.log('Show action menu for request:', requestId);
-    // Implement dropdown menu logic here
   }
 
   editRequest(requestId: string): void {
     console.log('Edit request:', requestId);
-    // Implement edit functionality
   }
 
   deleteRequest(requestId: string): void {
@@ -438,7 +418,6 @@ export class UserApproves implements OnInit {
       const request = this.leaveRequests[index];
       this.leaveRequests.splice(index, 1);
 
-      // Update statistics
       const stat = this.leaveStats.find((s) => s.type === request.status);
       if (stat) stat.count = Math.max(0, stat.count - 1);
 
@@ -449,10 +428,8 @@ export class UserApproves implements OnInit {
 
   viewRequestDetails(requestId: string): void {
     console.log('View request details:', requestId);
-    // Implement view details functionality
   }
 
-  // TrackBy function for Angular performance optimization
   trackByRequestId(index: number, item: LeaveRequest): string {
     return item.id;
   }

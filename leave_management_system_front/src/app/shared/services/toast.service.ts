@@ -33,7 +33,6 @@ export class ToastService {
     const currentToasts = this.toastsSubject.value;
     this.toastsSubject.next([...currentToasts, newToast]);
 
-    // Auto remove toast after duration
     if (newToast.duration && newToast.duration > 0) {
       setTimeout(() => {
         this.remove(id);

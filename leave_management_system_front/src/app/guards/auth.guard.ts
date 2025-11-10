@@ -24,7 +24,6 @@ export class AuthGuard implements CanActivate {
       return true;
     }
 
-    // If not logged in → redirect to login
     return this.router.createUrlTree(['/login'], {
       queryParams: { returnUrl: state.url },
     });
@@ -41,21 +40,21 @@ export class RoleGuard implements CanActivate {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): boolean | UrlTree | Observable<boolean | UrlTree> | Promise<boolean | UrlTree> {
-    // 1️⃣ Check login first
+
     if (!this.auth.isLoggedIn()) {
       return this.router.createUrlTree(['/login'], {
         queryParams: { returnUrl: state.url },
       });
     }
 
-    // 2️⃣ Check allowed roles from route metadata
+
     const allowedRoles = route.data['roles'] as string[] | undefined;
 
     if (allowedRoles && allowedRoles.length > 0) {
       const hasRole = allowedRoles.some((r) => this.auth.hasRole(r));
       if (!hasRole) {
         console.warn('Access denied. Missing required role(s):', allowedRoles);
-        return this.router.createUrlTree(['/dashboard']); // or /unauthorized
+        return this.router.createUrlTree(['/dashboard']);
       }
     }
 

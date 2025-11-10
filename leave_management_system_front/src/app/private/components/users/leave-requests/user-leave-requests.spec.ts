@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { LeaveType } from '../../../types/user/leaveRequestsType/leave-type.model';
 import { LeaveRequest } from '../../../types/user/leaveRequestsType/leave-request.model';
 import { DataMapperService } from '../../../../helpers/data-mapper.service';
+import { AuthService } from '../../../services/auth.service';
 
 
 @Component({
@@ -27,7 +28,8 @@ export class UserLeaveRequests implements OnInit {
   constructor(
     private fb: FormBuilder,
     private http: HttpClient,
-    private mapper: DataMapperService
+    private mapper: DataMapperService,
+    private authService: AuthService
   ) {
     this.leaveRequestForm = this.fb.group(
       {
@@ -173,8 +175,7 @@ export class UserLeaveRequests implements OnInit {
 
   // 🔹 Get logged-in user ID from storage or service
   private getCurrentUserId(): string {
-    // Replace with your actual auth service integration
-    return localStorage.getItem('user_id') || '';
+    return this.authService.getCurrentUserId() || '';
   }
 
   private markFormGroupTouched(): void {

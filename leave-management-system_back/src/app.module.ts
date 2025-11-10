@@ -4,7 +4,8 @@ import { AppService } from './app.service';
 
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
+import { TerminusModule } from '@nestjs/terminus';
+import { HttpModule } from '@nestjs/axios';
 
 import { SharedModule } from './shared/shared.module';
 import { UsersModule } from './users/users.module';
@@ -20,10 +21,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
-    // 1) Load .env globally
     ConfigModule.forRoot({ isGlobal: true }),
 
-    // 2) Configure TypeORM with PostgreSQL
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -34,12 +33,13 @@ import { NotificationsModule } from './notifications/notifications.module';
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
+        synchronize:
+          process.env.NODE_ENV !== 'production' &&
+          configService.get('DB_SYNCHRONIZE') === 'true',
       }),
       inject: [ConfigService],
     }),
 
-    // 3) Import all modules
     SharedModule,
     UsersModule,
     AuthModule,
@@ -51,6 +51,8 @@ import { NotificationsModule } from './notifications/notifications.module';
     CalendarModule,
     LeaveRequestsModule,
     NotificationsModule,
+    TerminusModule,
+    HttpModule,
   ],
   controllers: [AppController],
   providers: [AppService],

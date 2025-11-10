@@ -7,15 +7,12 @@
     <div class="main-content">
       <app-user-side-bar></app-user-side-bar>
 
-      <!-- Leave Statistics Content -->
       <div class="leave-statistics-container">
         <div class="page-header">
           <h1 class="page-title">Leave Statistics</h1>
         </div>
 
-        <!-- Statistics Cards and Charts Row -->
         <div class="stats-row">
-          <!-- Left Column - Statistics Cards -->
           <div class="stats-column">
             <h3 class="section-title">Leave Statistics</h3>
             <div class="stats-grid">
@@ -35,7 +32,6 @@
             </div>
           </div>
 
-          <!-- Right Column - Charts -->
           <div class="charts-column">
             <div class="chart-container">
               <h3 class="section-title">Leave Allowance</h3>
@@ -95,9 +91,7 @@
           </div>
         </div>
 
-        <!-- Actions and Filters Row -->
         <div class="actions-filters-row">
-          <!-- Quick Actions -->
           <div class="quick-actions">
             <h3 class="section-title">Quick Actions</h3>
             <div class="action-buttons">
@@ -119,7 +113,6 @@
             </div>
           </div>
 
-          <!-- Filters -->
           <div class="filters-section">
             <div class="filters-header">
               <h3 class="section-title">
@@ -178,7 +171,6 @@
           </div>
         </div>
 
-        <!-- Data Table -->
         <div class="table-container">
           <div class="table-header">
             <div class="table-title">Leave Requests</div>
@@ -313,7 +305,6 @@
             </table>
           </div>
 
-          <!-- Empty State -->
           <div class="empty-state" *ngIf="filteredRequests.length === 0">
             <div class="empty-icon">📋</div>
             <h3>No leave requests found</h3>

@@ -30,17 +30,14 @@ interface SeasonalPattern {
   styleUrls: ['./leave-analytics.css'],
 })
 export class LeaveAnalytics implements OnInit {
-  // Chart data
   leaveTrendsData: LeaveTrend[] = [];
   departmentStats: DepartmentStats[] = [];
   seasonalPatterns: SeasonalPattern[] = [];
   
-  // Filter properties
   selectedTimeRange: string = '12months';
   selectedDepartment: string = 'all';
   isLoading: boolean = false;
   
-  // Chart configurations
   leaveTrendsChart: any = {
     type: 'line',
     data: {
@@ -173,7 +170,6 @@ export class LeaveAnalytics implements OnInit {
     }
   };
 
-  // Statistics
   totalStats = {
     totalRequests: 0,
     approvedRequests: 0,
@@ -191,111 +187,152 @@ export class LeaveAnalytics implements OnInit {
   ngOnInit(): void {
     this.loadAnalyticsData();
   }
+private updateTrendsChart(): void {
+  if (!this.leaveTrendsChart?.data) return;
 
-  private loadAnalyticsData(): void {
-    this.isLoading = true;
-    
-    // Load different analytics data
-    Promise.all([
-      this.loadLeaveTrends(),
-      this.loadDepartmentStats(),
-      this.loadSeasonalPatterns(),
-      this.loadTotalStats()
-    ]).finally(() => {
-      this.isLoading = false;
-    });
-  }
+  this.leaveTrendsChart.data.labels = this.leaveTrendsData.map(t => t.month);
+  this.leaveTrendsChart.data.datasets[0].data = this.leaveTrendsData.map(t => t.approved);
+  this.leaveTrendsChart.data.datasets[1].data = this.leaveTrendsData.map(t => t.pending);
+  this.leaveTrendsChart.data.datasets[2].data = this.leaveTrendsData.map(t => t.rejected);
 
-  private loadLeaveTrends(): Promise<void> {
-    return new Promise((resolve) => {
-      // Simulate API call - replace with actual API
-      setTimeout(() => {
-        this.leaveTrendsData = [
-          { month: 'Jan', approved: 45, pending: 12, rejected: 3 },
-          { month: 'Feb', approved: 52, pending: 8, rejected: 2 },
-          { month: 'Mar', approved: 38, pending: 15, rejected: 4 },
-          { month: 'Apr', approved: 61, pending: 6, rejected: 1 },
-          { month: 'May', approved: 48, pending: 11, rejected: 3 },
-          { month: 'Jun', approved: 55, pending: 9, rejected: 2 },
-          { month: 'Jul', approved: 42, pending: 13, rejected: 5 },
-          { month: 'Aug', approved: 58, pending: 7, rejected: 1 },
-          { month: 'Sep', approved: 49, pending: 10, rejected: 3 },
-          { month: 'Oct', approved: 53, pending: 8, rejected: 2 },
-          { month: 'Nov', approved: 46, pending: 12, rejected: 4 },
-          { month: 'Dec', approved: 41, pending: 14, rejected: 6 }
-        ];
-        
-        this.updateTrendsChart();
-        resolve();
-      }, 1000);
-    });
-  }
+  this.refreshChartInstance(this.leaveTrendsChart);
+}
 
-  private loadDepartmentStats(): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        this.departmentStats = [
-          { department: 'Engineering', totalLeaves: 156, approvedLeaves: 142, pendingLeaves: 14, averageDays: 3.2 },
-          { department: 'Marketing', totalLeaves: 89, approvedLeaves: 78, pendingLeaves: 11, averageDays: 2.8 },
-          { department: 'Sales', totalLeaves: 134, approvedLeaves: 125, pendingLeaves: 9, averageDays: 4.1 },
-          { department: 'HR', totalLeaves: 67, approvedLeaves: 61, pendingLeaves: 6, averageDays: 2.5 },
-          { department: 'Finance', totalLeaves: 98, approvedLeaves: 89, pendingLeaves: 9, averageDays: 3.0 }
-        ];
-        
-        this.updateDepartmentChart();
-        resolve();
-      }, 1200);
-    });
-  }
+private updateDepartmentChart(): void {
+  if (!this.departmentChart?.data) return;
 
-  private loadSeasonalPatterns(): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        this.seasonalPatterns = [
-          { quarter: 'Q1 (Jan-Mar)', leaveCount: 135, percentage: 28 },
-          { quarter: 'Q2 (Apr-Jun)', leaveCount: 164, percentage: 34 },
-          { quarter: 'Q3 (Jul-Sep)', leaveCount: 149, percentage: 31 },
-          { quarter: 'Q4 (Oct-Dec)', leaveCount: 140, percentage: 29 }
-        ];
-        
-        this.updateSeasonalChart();
-        resolve();
-      }, 800);
-    });
-  }
+  this.departmentChart.data.labels = this.departmentStats.map(d => d.department);
+  this.departmentChart.data.datasets[0].data = this.departmentStats.map(d => d.totalLeaves);
+  this.departmentChart.data.datasets[1].data = this.departmentStats.map(d => d.approvedLeaves);
 
-  private loadTotalStats(): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        this.totalStats = {
-          totalRequests: 588,
-          approvedRequests: 535,
-          pendingRequests: 49,
-          rejectedRequests: 24,
-          averageProcessingTime: 2.3
-        };
-        resolve();
-      }, 600);
-    });
-  }
+  this.refreshChartInstance(this.departmentChart);
+}
 
-  private updateTrendsChart(): void {
-    this.leaveTrendsChart.data.labels = this.leaveTrendsData.map(trend => trend.month);
-    this.leaveTrendsChart.data.datasets[0].data = this.leaveTrendsData.map(trend => trend.approved);
-    this.leaveTrendsChart.data.datasets[1].data = this.leaveTrendsData.map(trend => trend.pending);
-    this.leaveTrendsChart.data.datasets[2].data = this.leaveTrendsData.map(trend => trend.rejected);
-  }
+private updateSeasonalChart(): void {
+  if (!this.seasonalChart?.data) return;
 
-  private updateDepartmentChart(): void {
-    this.departmentChart.data.labels = this.departmentStats.map(dept => dept.department);
-    this.departmentChart.data.datasets[0].data = this.departmentStats.map(dept => dept.totalLeaves);
-    this.departmentChart.data.datasets[1].data = this.departmentStats.map(dept => dept.approvedLeaves);
-  }
+  this.seasonalChart.data.labels = this.seasonalPatterns.map(s => s.quarter);
+  this.seasonalChart.data.datasets[0].data = this.seasonalPatterns.map(s => s.leaveCount);
 
-  private updateSeasonalChart(): void {
-    this.seasonalChart.data.labels = this.seasonalPatterns.map(pattern => pattern.quarter);
-    this.seasonalChart.data.datasets[0].data = this.seasonalPatterns.map(pattern => pattern.leaveCount);
+  this.refreshChartInstance(this.seasonalChart);
+}
+
+private refreshChartInstance(chart: any): void {
+  try {
+    if (chart && typeof chart.update === 'function') {
+      chart.update();
+    } else if (chart?.ctx?.canvas) {
+      const ChartJS = (window as any).Chart;
+      if (ChartJS) {
+        new ChartJS(chart.ctx, chart);
+      }
+    }
+  } catch (err) {
+    console.warn('Chart update failed:', err);
   }
+}
+
+private async loadAnalyticsData(): Promise<void> {
+  this.isLoading = true;
+
+  try {
+    const leaves: any[] = (await this.apiService.getAllLeaveRequests().toPromise()) ?? [];
+
+    this.computeLeaveTrends(leaves);
+    this.computeDepartmentStats(leaves);
+    this.computeSeasonalPatterns(leaves);
+    this.computeTotalStats(leaves);
+
+    this.updateTrendsChart();
+    this.updateDepartmentChart();
+    this.updateSeasonalChart();
+  } catch (err) {
+    console.error('Failed to load analytics:', err);
+  } finally {
+    this.isLoading = false;
+  }
+}
+
+private computeLeaveTrends(leaves: any[]): void {
+  const monthlyData: Record<string, { approved: number; pending: number; rejected: number }> = {};
+
+  leaves.forEach(l => {
+    const month = new Date(l.start_date).toLocaleString('en', { month: 'short' });
+    if (!monthlyData[month]) monthlyData[month] = { approved: 0, pending: 0, rejected: 0 };
+    const status = l.status?.toLowerCase();
+    if (status === 'approved' || status === 'pending' || status === 'rejected') {
+      monthlyData[month][status as 'approved' | 'pending' | 'rejected'] = (monthlyData[month][status as 'approved' | 'pending' | 'rejected'] || 0) + 1;
+    }
+  });
+
+  this.leaveTrendsData = Object.entries(monthlyData).map(([month, counts]) => ({
+    month,
+    approved: counts.approved || 0,
+    pending: counts.pending || 0,
+    rejected: counts.rejected || 0,
+  }));
+}
+
+private computeDepartmentStats(leaves: any[]): void {
+  const deptMap: Record<string, { total: number; approved: number; pending: number; totalDays: number }> = {};
+
+  leaves.forEach(l => {
+    const dept = l.user?.team?.name || 'Unassigned';
+    if (!deptMap[dept]) deptMap[dept] = { total: 0, approved: 0, pending: 0, totalDays: 0 };
+
+    deptMap[dept].total++;
+    if (l.status === 'approved') deptMap[dept].approved++;
+    if (l.status === 'pending') deptMap[dept].pending++;
+
+    const start = new Date(l.start_date);
+    const end = new Date(l.end_date);
+    const diffDays = (end.getTime() - start.getTime()) / (1000 * 3600 * 24) + 1;
+    deptMap[dept].totalDays += diffDays;
+  });
+
+  this.departmentStats = Object.entries(deptMap).map(([department, stats]) => ({
+    department,
+    totalLeaves: stats.total,
+    approvedLeaves: stats.approved,
+    pendingLeaves: stats.pending,
+    averageDays: stats.totalDays / stats.total || 0,
+  }));
+}
+
+private computeSeasonalPatterns(leaves: any[]): void {
+  const quarters = { 'Q1 (Jan–Mar)': 0, 'Q2 (Apr–Jun)': 0, 'Q3 (Jul–Sep)': 0, 'Q4 (Oct–Dec)': 0 };
+
+  leaves.forEach(l => {
+    const month = new Date(l.start_date).getMonth();
+    if (month <= 2) quarters['Q1 (Jan–Mar)']++;
+    else if (month <= 5) quarters['Q2 (Apr–Jun)']++;
+    else if (month <= 8) quarters['Q3 (Jul–Sep)']++;
+    else quarters['Q4 (Oct–Dec)']++;
+  });
+
+  const total = Object.values(quarters).reduce((a, b) => a + b, 0);
+  this.seasonalPatterns = Object.entries(quarters).map(([quarter, count]) => ({
+    quarter,
+    leaveCount: count,
+    percentage: total ? (count / total) * 100 : 0,
+  }));
+}
+
+private computeTotalStats(leaves: any[]): void {
+  const approved = leaves.filter(l => l.status === 'approved').length;
+  const pending = leaves.filter(l => l.status === 'pending').length;
+  const rejected = leaves.filter(l => l.status === 'rejected').length;
+  const total = leaves.length;
+
+  this.totalStats = {
+    totalRequests: total,
+    approvedRequests: approved,
+    pendingRequests: pending,
+    rejectedRequests: rejected,
+    averageProcessingTime: 0 
+  };
+}
+
 
   onTimeRangeChange(): void {
     this.loadAnalyticsData();

@@ -21,7 +21,6 @@ interface DashboardStats {
   styleUrls: ['./admin-dashboard.css'],
 })
 export class AdminDashboard implements OnInit {
-  // 🧠 Reactive signals for live updates
   userCount = signal<number>(0);
   pendingCount = signal<number>(0);
   approvedCount = signal<number>(0);
@@ -29,7 +28,6 @@ export class AdminDashboard implements OnInit {
   leaveTypeCount = signal<number>(0);
   holidayCount = signal<number>(0);
 
-  // ✅ Dashboard summary
   stats: DashboardStats = {
     pendingRequests: 0,
     approvedRequests: 0,
@@ -38,7 +36,6 @@ export class AdminDashboard implements OnInit {
     activeHolidays: 0,
   };
 
-  // ✅ Recent backend activities
   recentActivities: Activity[] = [];
 
   constructor(
@@ -51,15 +48,12 @@ export class AdminDashboard implements OnInit {
     this.loadDashboardData();
   }
 
-  // 🔹 Fetch all required dashboard data
   private loadDashboardData(): void {
-    // 1️⃣ User count
     this.api.getAllUsersCount().subscribe({
       next: (count) => this.userCount.set(count),
       error: (err) => console.error('Failed to load user count', err),
     });
 
-    // 2️⃣ Leave request stats
     this.api.getAllPendingRequests().subscribe({
       next: (res) => {
         this.pendingCount.set(res);
@@ -81,7 +75,6 @@ export class AdminDashboard implements OnInit {
       },
     });
 
-    // 3️⃣ Leave types
     this.api.getLeaveTypes().subscribe({
       next: (res) => {
         this.leaveTypeCount.set(res.length);
@@ -90,7 +83,6 @@ export class AdminDashboard implements OnInit {
       error: (err) => console.error('Failed to load leave types', err),
     });
 
-    // 4️⃣ Holidays
     this.api.getHolidays().subscribe({
       next: (res) => {
         const activeHolidays = res.filter(
@@ -102,7 +94,6 @@ export class AdminDashboard implements OnInit {
       error: (err) => console.error('Failed to load holidays', err),
     });
 
-    // 5️⃣ Recent Activities
     this.loadRecentActivities();
   }
 
@@ -111,15 +102,13 @@ export class AdminDashboard implements OnInit {
       .getDashboardData()
       .subscribe({
         next: (res) => {
-          // Assuming your backend includes `recentActivities`
           const mapped = this.mapper.fromApiArray<Activity>(res.activities || []);
-          this.recentActivities = mapped.slice(0, 6); // Limit to latest 6
+          this.recentActivities = mapped.slice(0, 6); 
         },
         error: (err) => console.error('Failed to load activities', err),
       });
   }
 
-  // ✅ Utility functions for UI
   navigateTo(route: string): void {
     this.router.navigate([route]);
   }

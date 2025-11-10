@@ -10,6 +10,8 @@ import { LeaveRequest } from '../types/user/leaveRequestsType/leave-request.mode
 import { Holiday } from '../../types/holiday.model';
 import { User } from '../../types/user.model';
 import { ApiResponse } from '../../types/api-response.type';
+import { Team } from '../../types/team.model';
+import { LeaveBalance } from '../../types/leave-balance.model';
 
 
 @Injectable({
@@ -20,7 +22,6 @@ export class ApiService {
 
   constructor(private http: HttpClient, private mapper: DataMapperService) { }
 
-  // 🔹 Profile APIs
   getProfile(userId?: string): Observable<EmployeeProfileData> {
     const url = userId
       ? `${this.apiUrl}/profile/${userId}`
@@ -42,14 +43,14 @@ export class ApiService {
       .pipe(map((res) => this.mapper.fromApi<EmployeeProfileData>(res.data)));
   }
 
-  // 🔹 Dashboard APIs
+
   getDashboardData(): Observable<DashboardData> {
     return this.http
       .get<ApiResponse<DashboardData>>(`${this.apiUrl}/profile/dashboard`)
       .pipe(map((res) => this.mapper.fromApi<DashboardData>(res.data)));
   }
 
-  // 🔹 Leave APIs
+
   getLeaveTypes(): Observable<LeaveType[]> {
     return this.http
       .get<ApiResponse<LeaveType[]>>(`${this.apiUrl}/leave-types`)
@@ -83,8 +84,13 @@ export class ApiService {
       .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/me`)
       .pipe(map((res) => this.mapper.fromApiArray<LeaveRequest>(res.data)));
   }
+  getTeams(): Observable<Team[]> {
+    return this.http
+      .get<any>(`${this.apiUrl}/teams`)
+      .pipe(map((res) => (res && res.data ? res.data : res)));
+  }
 
-  // 🔹 Leave Request Stats
+
   getAllPendingRequests(): Observable<number> {
     return this.http
       .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
@@ -102,9 +108,13 @@ export class ApiService {
       .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
       .pipe(map((res) => res.data.filter((r) => r.status === 'approved').length));
   }
+  getAllLeaveRequests(): Observable<LeaveRequest[]> {
+    return this.http
+      .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
+      .pipe(map((res) => this.mapper.fromApiArray<LeaveRequest>(res.data)));
+  }
 
 
-  // 🔹 Calendar APIs
   getCalendarEvents(month?: number, year?: number): Observable<any[]> {
     const params = new URLSearchParams();
     if (month !== undefined) params.append('month', String(month));
@@ -116,7 +126,6 @@ export class ApiService {
       .pipe(map((res) => this.mapper.fromApiArray<any>(res.data)));
   }
 
-  // 🔹 Holidays
   getHolidays(year?: number): Observable<Holiday[]> {
     const url = year
       ? `${this.apiUrl}/holidays?year=${year}`
@@ -126,7 +135,7 @@ export class ApiService {
       .pipe(map((res) => this.mapper.fromApiArray<Holiday>(res.data)));
   }
 
-  // 🔹 User APIs
+
   getAllUsers(): Observable<User[]> {
     return this.http
       .get<ApiResponse<User[]>>(`${this.apiUrl}/users`)
@@ -136,7 +145,13 @@ export class ApiService {
   getAllUsersCount(): Observable<number> {
     return this.getAllUsers().pipe(map((users) => users.length));
   }
-  // 🔹 Register user with optional profile picture
+
+  getUserLeaveBalances(userId: string): Observable<Record<string, LeaveBalance>> {
+    return this.http
+      .get<ApiResponse<Record<string, LeaveBalance>>>(`${this.apiUrl}/leave-balances/user/${userId}`)
+      .pipe(map((res) => this.mapper.fromApi<Record<string, LeaveBalance>>(res.data)));
+  }
+
   registerWithFile(formData: FormData): Promise<any> {
     const url = `${this.apiUrl}/auth/register`;
     return this.http.post<ApiResponse<any>>(url, formData).toPromise();
@@ -146,5 +161,5 @@ export class ApiService {
 
 export type { LeaveRequest };
 
-  export type { LeaveType };
+export type { LeaveType };
 

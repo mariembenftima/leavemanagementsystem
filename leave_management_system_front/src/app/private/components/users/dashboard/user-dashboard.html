@@ -5,25 +5,18 @@
     <app-user-side-bar></app-user-side-bar>
 
     <div class="dashboard-content">
-      <!-- Loading Indicator -->
       <div *ngIf="isLoading" class="loading-container">
         <div class="loading-spinner"></div>
         <p>Loading dashboard data...</p>
       </div>
-
-      <!-- Error Message -->
       <div *ngIf="hasError && !isLoading" class="error-container">
         <div class="error-message">
           <i class="fas fa-exclamation-triangle"></i>
           Failed to load dashboard data. Please try again later.
         </div>
       </div>
-
-      <!-- Main Dashboard Content -->
       <div *ngIf="!isLoading && !hasError && dashboardData">
         <h2>Welcome, {{ employee?.fullname || 'User' }}!</h2>
-
-        <!-- USER INFO SECTION -->
         <div class="dashboard-section">
           <h3>👤 User Information</h3>
           <div class="user-info-grid">
@@ -67,7 +60,6 @@
           </div>
         </div>
 
-        <!-- LEAVE SUMMARY -->
         <div class="dashboard-section" *ngIf="leaveBalance | keyvalue as balances">
           <h3>🏖️ Leave Summary</h3>
           <table class="leave-table">
@@ -90,7 +82,6 @@
           </table>
         </div>
 
-        <!-- HOLIDAYS -->
         <div class="dashboard-section" *ngIf="holidays.length > 0">
           <h3>🎉 Upcoming Holidays</h3>
           <ul class="holiday-list">
@@ -100,7 +91,6 @@
           </ul>
         </div>
 
-        <!-- PERFORMANCE -->
         <div class="dashboard-section" *ngIf="performance.length > 0">
           <h3>📈 Performance Reviews</h3>
           <div class="performance-grid">
@@ -118,7 +108,6 @@
           </div>
         </div>
 
-        <!-- ACTIVITIES -->
         <div class="dashboard-section" *ngIf="activities.length > 0">
           <h3>🕒 Recent Activities</h3>
           <ul class="activity-list">

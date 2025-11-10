@@ -71,7 +71,6 @@ export class UserCalender implements OnInit {
     await this.refreshCalendar();
   }
 
-  /** 🔹 Refresh calendar and reload data */
   async refreshCalendar(): Promise<void> {
     this.isLoading = true;
     try {
@@ -84,7 +83,6 @@ export class UserCalender implements OnInit {
     }
   }
 
-  /** 🔹 Load all calendar-related data from backend */
 private async loadCalendarData(): Promise<void> {
   try {
     const [events, holidays, leaves] = await Promise.all([
@@ -105,7 +103,6 @@ private async loadCalendarData(): Promise<void> {
 }
 
 
-  /** 🔹 Map API events to CalendarEvent format */
   private processCalendarEvents(apiEvents: any[]): CalendarEvent[] {
     return apiEvents.map(event => ({
       id: event.id,
@@ -117,7 +114,6 @@ private async loadCalendarData(): Promise<void> {
     }));
   }
 
-  /** 🔹 Add holidays to event list */
   private addHolidaysToCalendar(holidays: any[]): void {
     holidays.forEach(holiday => {
       const date = new Date(holiday.date);
@@ -134,7 +130,6 @@ private async loadCalendarData(): Promise<void> {
     });
   }
 
-  /** 🔹 Add approved leave requests to calendar */
   private addLeaveRequestsToCalendar(leaveRequests: any[]): void {
     leaveRequests
       .filter(req => req.status === 'approved')
@@ -154,7 +149,6 @@ private async loadCalendarData(): Promise<void> {
       });
   }
 
-  /** 🔹 Map backend leave type to calendar type */
   private mapLeaveTypeToCalendarType(
     name: string
   ): 'congé-payé' | 'congé-non-payé' | 'congé-maladie' | 'congé-maternité' | 'non-traité' | 'autres' {
@@ -171,7 +165,6 @@ private async loadCalendarData(): Promise<void> {
     return map[name] || 'autres';
   }
 
-  /** 🔹 Color mapping for leave types */
   private getLeaveTypeColor(name: string): string {
     const colorMap: Record<string, string> = {
       'Annual Leave': '#3b82f6',
@@ -187,7 +180,6 @@ private async loadCalendarData(): Promise<void> {
     return colorMap[name] || '#6b7280';
   }
 
-  /** 🔹 Build the full 6-week (42-day) calendar grid */
   generateCalendar(): void {
     const firstDay = new Date(this.currentYear, this.currentMonth, 1);
     const start = new Date(firstDay);
@@ -211,7 +203,6 @@ private async loadCalendarData(): Promise<void> {
     }
   }
 
-  /** 🔹 Navigation & utility functions */
   previousMonth(): void {
     if (this.currentMonth === 0) {
       this.currentMonth = 11;
@@ -258,7 +249,6 @@ private async loadCalendarData(): Promise<void> {
     }
   }
 
-  /** 🔹 Helpers */
   private sameYMD(a: Date, b: Date): boolean {
     return a.getFullYear() === b.getFullYear() &&
            a.getMonth() === b.getMonth() &&
@@ -275,7 +265,6 @@ private async loadCalendarData(): Promise<void> {
     return start <= monthEnd && end >= monthStart;
   }
 
-  /** 🔹 Template utilities */
   isWeekend(date: Date): boolean {
     const day = date.getDay();
     return day === 0 || day === 6;
@@ -283,11 +272,9 @@ private async loadCalendarData(): Promise<void> {
 
   onEventClick(event: CalendarEvent): void {
     console.log('Event clicked:', event);
-    // Placeholder: open modal/details
   }
 
   onDayClick(day: CalendarDay): void {
     console.log('Day clicked:', day);
-    // Placeholder: custom logic or modal
   }
 }

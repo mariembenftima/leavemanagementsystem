@@ -8,9 +8,11 @@ import {
   ElementRef,
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { AuthService } from '../../../services/auth.service';
 import { EmployeeProfileData } from '../../../types/user/profileType/employee-profile-data.type';
 import { LeaveBalance } from '../../../../types/leave-balance.model';
 import { DataMapperService } from '../../../../helpers/data-mapper.service';
+import { ApiService } from '../../../services/api.service';
 
 
 @Component({
@@ -32,7 +34,12 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
   private autoSaveTimer?: number;
   private clockInterval?: number;
 
-  constructor(private http: HttpClient, private mapper: DataMapperService) {}
+  constructor(
+    private http: HttpClient, 
+    private mapper: DataMapperService, 
+    private authService: AuthService,
+    private apiService: ApiService
+  ) {}
 
   ngOnInit(): void {
     this.loadEmployeeProfile();
@@ -54,28 +61,65 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     w.toggleDarkMode = this.toggleDarkMode.bind(this);
   }
 
-  // 🔹 Load employee profile from backend
   private loadEmployeeProfile(): void {
     const userId = this.getCurrentUserId();
-    this.http.get(`/api/employee_profiles/${userId}`).subscribe({
-      next: (res: any) => {
-        this.employeeData = this.mapper.fromApi<EmployeeProfileData>(res);
-        this.isLoading = false;
+    this.apiService.getProfile(userId).subscribe({
+      next: (profileData) => {
+        if (profileData) {
+          this.employeeData = profileData;
+          this.isLoading = false;
+        } else {
+          console.error('No profile data received');
+          this.hasError = true;
+          this.isLoading = false;
+        }
       },
       error: (err) => {
         console.error('Failed to load employee profile:', err);
-        this.hasError = true;
-        this.isLoading = false;
+        if (err.status === 404) {
+          this.employeeData = this.getEmptyProfileData();
+          this.isLoading = false;
+        } else {
+          this.hasError = true;
+          this.isLoading = false;
+        }
       },
     });
   }
 
-  // 🔹 Load leave balances for current employee
+  private getEmptyProfileData(): EmployeeProfileData {
+    return {
+      id: '',
+      user_id: this.getCurrentUserId(),
+      employee_id: '',
+      fullname: '',
+      email: 'dfsc',
+      phone: '',
+      department: '',
+      designation: '',
+      join_date: new Date().toISOString().split('T')[0],
+      gender: '',
+      date_of_birth: '',
+      address: '',
+      emergency_contact_name: '',
+      emergency_contact_phone: '',
+      marital_status: '',
+      nationality: '',
+      salary: 0,
+      bank_account_number: '',
+      bank_name: '',
+      roles: 'employee',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      isActive: true
+    };
+  }
+
   private loadLeaveBalances(): void {
     const userId = this.getCurrentUserId();
-    this.http.get(`/api/leave_balances/${userId}`).subscribe({
-      next: (res: any) => {
-        this.leaveBalances = this.mapper.fromApi<Record<string, LeaveBalance>>(res);
+    this.apiService.getUserLeaveBalances(userId).subscribe({
+      next: (balances) => {
+        this.leaveBalances = balances;
       },
       error: (err) => {
         console.error('Failed to load leave balances:', err);
@@ -110,7 +154,7 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private getCurrentUserId(): string {
-    return localStorage.getItem('user_id') || '';
+    return this.authService.getCurrentUserId() || '';
   }
 
   closeModal(): void {
