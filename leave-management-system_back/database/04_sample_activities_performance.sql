@@ -1,7 +1,4 @@
--- Sample Activities and Performance Data
--- This script adds sample activity logs and performance reviews
 
--- Insert sample activities for different employees
 INSERT INTO activities (profile_id, activity_type, description, activity_date) 
 SELECT 
     ep.id,
@@ -48,10 +45,8 @@ SELECT
 FROM employee_profiles ep
 LIMIT 35;
 
--- Insert sample performance reviews
 INSERT INTO performances (profile_id, review_period, rating, goals, achievements, feedback, reviewer_id, created_at) VALUES
 
--- IT Team Performance Reviews
 ((SELECT id FROM employee_profiles WHERE employee_id = 'EMP003'), '2024 Q3', 4.5, 
 'Lead digital transformation initiatives, improve system reliability, mentor junior developers', 
 'Successfully migrated legacy systems to cloud, reduced downtime by 40%, mentored 3 junior developers', 
@@ -70,7 +65,6 @@ INSERT INTO performances (profile_id, review_period, rating, goals, achievements
 'Good progress in technical skills. Needs to work on time estimation and communication.', 
 '550e8400-e29b-41d4-a716-446655440003', '2024-10-15 16:00:00'),
 
--- HR Team Performance Reviews
 ((SELECT id FROM employee_profiles WHERE employee_id = 'EMP001'), '2024 Q3', 4.7, 
 'Streamline HR processes, improve employee satisfaction, implement new policies', 
 'Reduced hiring time by 30%, achieved 95% employee satisfaction score, launched wellness program', 
@@ -83,7 +77,6 @@ INSERT INTO performances (profile_id, review_period, rating, goals, achievements
 'Reliable and detail-oriented. Good support to HR initiatives. Could take more initiative.', 
 '550e8400-e29b-41d4-a716-446655440001', '2024-10-12 11:15:00'),
 
--- Marketing Team Performance Reviews
 ((SELECT id FROM employee_profiles WHERE employee_id = 'EMP006'), '2024 Q3', 4.4, 
 'Increase brand awareness, launch new campaigns, improve conversion rates', 
 'Increased brand awareness by 25%, launched 3 successful campaigns, improved conversion by 15%', 
@@ -96,7 +89,6 @@ INSERT INTO performances (profile_id, review_period, rating, goals, achievements
 'Good analytical skills and creativity. Needs to improve project management and deadline adherence.', 
 '550e8400-e29b-41d4-a716-446655440006', '2024-10-18 14:00:00'),
 
--- Sales Team Performance Reviews
 ((SELECT id FROM employee_profiles WHERE employee_id = 'EMP010'), '2024 Q3', 4.6, 
 'Exceed sales targets, build customer relationships, lead team development', 
 'Achieved 120% of sales target, secured 15 new major clients, increased team performance by 18%', 
@@ -109,7 +101,6 @@ INSERT INTO performances (profile_id, review_period, rating, goals, achievements
 'Consistent performance with room for growth. Good customer service skills, needs to work on closing techniques.', 
 '550e8400-e29b-41d4-a716-446655440010', '2024-10-20 10:30:00'),
 
--- Finance Team Performance Reviews
 ((SELECT id FROM employee_profiles WHERE employee_id = 'EMP008'), '2024 Q3', 4.5, 
 'Ensure financial accuracy, implement cost control measures, lead financial planning', 
 'Maintained 100% accuracy in reports, reduced costs by 12%, completed annual budget planning', 
@@ -122,7 +113,6 @@ INSERT INTO performances (profile_id, review_period, rating, goals, achievements
 'Strong analytical skills and attention to detail. Good progress in process improvement.', 
 '550e8400-e29b-41d4-a716-446655440008', '2024-10-22 11:45:00'),
 
--- Operations Team Performance Reviews
 ((SELECT id FROM employee_profiles WHERE employee_id = 'EMP012'), '2024 Q3', 4.3, 
 'Optimize operational processes, ensure quality standards, lead continuous improvement', 
 'Improved process efficiency by 20%, maintained quality standards above 98%, led 4 improvement projects', 
@@ -135,14 +125,12 @@ INSERT INTO performances (profile_id, review_period, rating, goals, achievements
 'Reliable and proactive. Good understanding of operational processes. Shows initiative in improvements.', 
 '550e8400-e29b-41d4-a716-446655440012', '2024-10-25 15:00:00'),
 
--- Legal Team Performance Reviews
 ((SELECT id FROM employee_profiles WHERE employee_id = 'EMP014'), '2024 Q3', 4.8, 
 'Provide legal guidance, manage compliance, handle contract negotiations', 
 'Provided legal guidance on 50+ matters, achieved 100% compliance, negotiated 25+ contracts', 
 'Exceptional legal expertise and strategic thinking. Outstanding compliance management and risk assessment.', 
 '550e8400-e29b-41d4-a716-446655440017', '2024-10-28 10:20:00'),
 
--- Customer Support Performance Reviews
 ((SELECT id FROM employee_profiles WHERE employee_id = 'EMP015'), '2024 Q3', 4.2, 
 'Maintain customer satisfaction, resolve issues efficiently, train support team', 
 'Maintained 96% customer satisfaction, reduced resolution time by 25%, trained 5 team members', 
@@ -155,7 +143,7 @@ INSERT INTO performances (profile_id, review_period, rating, goals, achievements
 'Good customer service attitude and willingness to learn. Needs to improve technical knowledge and efficiency.', 
 '550e8400-e29b-41d4-a716-446655440015', '2024-10-30 14:30:00');
 
--- Add some 2024 Q2 performance reviews for comparison
+
 INSERT INTO performances (profile_id, review_period, rating, goals, achievements, feedback, reviewer_id, created_at) VALUES
 
 ((SELECT id FROM employee_profiles WHERE employee_id = 'EMP003'), '2024 Q2', 4.3, 

@@ -8,7 +8,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { login } from './auth/components/login/login';
 import { RegisterComponent } from './public/register/register';
 import { LandingPage } from './public/components/landing-page/landing-page';
-import { HttpClientModule } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { Dashboard } from './private/components/users/dashboard/user-dashboard';
 import { UserProfile } from './private/components/users/profile/user-profile';
 import { UserSideBar } from './layout/user/user-side-bar/user-side-bar';
@@ -31,6 +31,7 @@ import { AuthService } from './private/services/auth.service';
 import { ToastService } from './shared/services/toast.service';
 // Chart.js
 import { BaseChartDirective } from 'ng2-charts';
+import { AuthInterceptor } from './interceptors/auth.interceptor';
 
 @NgModule({
   declarations: [
@@ -68,6 +69,7 @@ import { BaseChartDirective } from 'ng2-charts';
     provideBrowserGlobalErrorListeners(),
     ApiService,
     AuthService,
+     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
   ],
   bootstrap: [App],
 })

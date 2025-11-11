@@ -1,9 +1,9 @@
-// src/auth/jwt.strategy.ts
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { jwtConstants } from './constants';
 import { JwtPayload } from './types/interfaces/jwt-payload.interface';
+import { AuthenticatedUser } from './types/authenticated-request';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -11,12 +11,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: jwtConstants.secret, // move to env in prod
+      secretOrKey: jwtConstants.secret,
     });
   }
 
-  // This sets req.user on protected routes
-  async validate(payload: JwtPayload) {
-    return { userId: payload.sub, email: payload.email, role: payload.role };
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
+    return {
+      userId: payload.sub,
+      email: payload.email,
+      roles: payload.role || [],
+    };
   }
 }

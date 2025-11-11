@@ -8,6 +8,7 @@ import {
   Param,
   ParseIntPipe,
 } from '@nestjs/common';
+
 import { LeaveTypesService } from './leave-types.service';
 import { CreateLeaveTypeDto } from './types/dtos/create-leave-type.dto';
 import { UpdateLeaveTypeDto } from './types/dtos/update-leave-type.dto';
@@ -23,7 +24,12 @@ export class LeaveTypesController {
 
   @Get()
   async findAll() {
-    return await this.service.findAll();
+    const leaveTypes = await this.service.findAll();
+    return {
+      success: true,
+      data: leaveTypes,
+      message: 'Leave types retrieved successfully',
+    };
   }
 
   @Get(':id')

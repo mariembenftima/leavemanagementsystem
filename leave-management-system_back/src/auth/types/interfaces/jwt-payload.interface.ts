@@ -1,7 +1,7 @@
 export interface JwtPayload {
-  sub: number; // user id
+  sub: string;
   email: string;
-  role: string;
-  iat?: number; // issued at (added by JWT lib)
-  exp?: number; // expiry (added by JWT lib)
+  role: string[];
+  iat?: number;
+  exp?: number;
 }

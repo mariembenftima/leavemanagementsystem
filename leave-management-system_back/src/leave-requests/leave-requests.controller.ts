@@ -1,126 +1,121 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  Request,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { LeaveRequestsService } from './leave-requests.service';
 import { LeaveRequestStatus } from './entities/leave-request.entity';
+import { AuthenticatedRequest } from 'src/auth/types/authenticated-request';
 
 @ApiTags('leave-requests')
+@ApiBearerAuth()
 @Controller('leave-requests')
-
 export class LeaveRequestsController {
   constructor(private readonly leaveRequestsService: LeaveRequestsService) {}
 
-  @Get('me')
-  @ApiOperation({ summary: 'Get current user\'s leave requests' })
-  @ApiResponse({ status: 200, description: 'Leave requests retrieved successfully' })
-  @ApiQuery({ name: 'month', required: false, type: Number })
-  @ApiQuery({ name: 'year', required: false, type: Number })
-  async getMyLeaveRequests(
-    @Request() req,
-    @Query('month') month?: number,
-    @Query('year') year?: number
-  ) {
-    const mockLeaveRequests = await this.leaveRequestsService.getMockLeaveRequests();
-    
-    return {
-      success: true,
-      data: mockLeaveRequests,
-      message: 'Leave requests retrieved successfully'
-    };
-  }
+  // 🔹 Get all leave requests (Admin/HR)
 
-  @Get('all')
   @ApiOperation({ summary: 'Get all leave requests (HR/Admin only)' })
-  @ApiResponse({ status: 200, description: 'All leave requests retrieved successfully' })
-  async getAllLeaveRequests(@Request() req) {
-    const leaveRequests = await this.leaveRequestsService.getAllLeaveRequests();
-    
-    return {
-      success: true,
-      data: leaveRequests,
-      message: 'All leave requests retrieved successfully'
-    };
+  @ApiResponse({
+    status: 200,
+    description: 'All leave requests retrieved successfully',
+  })
+  // leave-requests.controller.ts
+  @Get('all')
+  async getAllLeaveRequests() {
+    try {
+      const leaveRequests =
+        await this.leaveRequestsService.getAllLeaveRequests();
+      return {
+        success: true,
+        data: leaveRequests,
+        message: 'All leave requests retrieved successfully',
+      };
+    } catch (err) {
+      console.error('❌ /leave-requests/all failed:', err.message, err.stack); // 👈 show real cause
+      throw err;
+    }
   }
 
+  // 🔹 Get only pending requests
   @Get('pending')
-  @ApiOperation({ summary: 'Get pending leave requests (HR/Admin only)' })
-  @ApiResponse({ status: 200, description: 'Pending leave requests retrieved successfully' })
-  async getPendingLeaveRequests(@Request() req) {
-    const pendingRequests = await this.leaveRequestsService.getMockLeaveRequests()
-      .then(requests => requests.filter(req => req.status === 'pending'));
-    
+  @ApiOperation({ summary: 'Get all pending leave requests' })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending leave requests retrieved successfully',
+  })
+  async getPendingLeaveRequests() {
+    const pendingRequests =
+      await this.leaveRequestsService.getPendingLeaveRequests();
     return {
       success: true,
       data: pendingRequests,
-      message: 'Pending leave requests retrieved successfully'
+      message: 'Pending leave requests retrieved successfully',
     };
   }
 
-  @Post()
-  @ApiOperation({ summary: 'Create a new leave request' })
-  @ApiResponse({ status: 201, description: 'Leave request created successfully' })
-  async createLeaveRequest(@Body() createLeaveRequestDto: any, @Request() req) {
-    try {
-      // For now, return a mock response since we don't have full database setup
-      const mockRequest = {
-        id: 'new-' + Date.now(),
-        ...createLeaveRequestDto,
-        status: 'pending',
-        appliedDate: new Date().toISOString().split('T')[0],
-        employee: {
-          name: req.user.firstName + ' ' + req.user.lastName,
-          email: req.user.email,
-          department: req.user.department || 'Unknown'
-        }
-      };
+  // 🔹 Get current user's leave requests
 
-      return {
-        success: true,
-        data: mockRequest,
-        message: 'Leave request created successfully'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to create leave request',
-        error: error.message
-      };
-    }
+  @ApiOperation({ summary: 'Get current user’s leave requests' })
+  @ApiResponse({
+    status: 200,
+    description: 'Leave requests retrieved successfully',
+  })
+  @Get('me')
+  async getMyLeaveRequests(@Request() req: AuthenticatedRequest) {
+    const userId = req.user.userId;
+    return {
+      success: true,
+      data: await this.leaveRequestsService.getLeaveRequestsByUser(userId),
+    };
   }
 
+  // 🔹 Create new leave request
+  @Post()
+  @ApiOperation({ summary: 'Create a new leave request' })
+  @ApiResponse({
+    status: 201,
+    description: 'Leave request created successfully',
+  })
+  async createLeaveRequest(@Body() dto: any, @Request() req) {
+    const userId = (req.user as { id: string })?.id;
+    const createdRequest = await this.leaveRequestsService.createLeaveRequest(
+      dto,
+      userId,
+    );
+    return {
+      success: true,
+      data: createdRequest,
+      message: 'Leave request created successfully',
+    };
+  }
+
+  // 🔹 Update status (approve/reject)
   @Put(':id/status')
-  @ApiOperation({ summary: 'Update leave request status (HR/Admin only)' })
-  @ApiResponse({ status: 200, description: 'Leave request status updated successfully' })
   async updateLeaveRequestStatus(
     @Param('id') id: string,
     @Body() updateStatusDto: { status: LeaveRequestStatus },
-    @Request() req
+    @Request() req: AuthenticatedRequest,
   ) {
-    try {
-      // For now, return a mock response
-      const mockRequest = {
-        id,
-        status: updateStatusDto.status,
-        reviewedBy: req.user.firstName + ' ' + req.user.lastName,
-        reviewedAt: new Date().toISOString(),
-        employee: {
-          name: 'John Doe',
-          email: 'john.doe@company.com',
-          department: 'Engineering'
-        }
-      };
-
-      return {
-        success: true,
-        data: mockRequest,
-        message: `Leave request ${updateStatusDto.status} successfully`
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Failed to update leave request status',
-        error: error.message
-      };
-    }
+    const updated = await this.leaveRequestsService.updateLeaveRequestStatus(
+      id,
+      updateStatusDto.status,
+      req.user.userId,
+    );
+    return {
+      success: true,
+      data: updated,
+      message: `Leave request ${updateStatusDto.status} successfully`,
+    };
   }
 }

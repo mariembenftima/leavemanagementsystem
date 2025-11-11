@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
-import { LeaveRequest, LeaveRequestStatus } from '../leave-requests/entities/leave-request.entity';
+import {
+  LeaveRequest,
+  LeaveRequestStatus,
+} from '../leave-requests/entities/leave-request.entity';
 import { User } from '../users/entities/users.entity';
 
 export interface EmailTemplate {
@@ -33,10 +36,10 @@ export class EmailNotificationService {
   async sendLeaveRequestNotification(
     leaveRequest: LeaveRequest,
     recipient: User,
-    type: 'submitted' | LeaveRequestStatus
+    type: 'submitted' | LeaveRequestStatus,
   ): Promise<void> {
     const template = this.getEmailTemplate(leaveRequest, recipient, type);
-    
+
     try {
       await this.transporter.sendMail({
         from: `"Leave Management System" <${this.configService.get('SMTP_USER')}>`,
@@ -45,8 +48,10 @@ export class EmailNotificationService {
         html: template.html,
         text: template.text,
       });
-      
-      console.log(`Email notification sent to ${recipient.email} for leave request ${leaveRequest.id}`);
+
+      console.log(
+        `Email notification sent to ${recipient.email} for leave request ${leaveRequest.id}`,
+      );
     } catch (error) {
       console.error('Failed to send email notification:', error);
       throw error;
@@ -56,31 +61,31 @@ export class EmailNotificationService {
   async sendBulkNotifications(
     leaveRequests: LeaveRequest[],
     recipients: User[],
-    type: 'submitted' | LeaveRequestStatus
+    type: 'submitted' | LeaveRequestStatus,
   ): Promise<void> {
     const promises: Promise<void>[] = [];
-    
+
     for (const leaveRequest of leaveRequests) {
       for (const recipient of recipients) {
         promises.push(
-          this.sendLeaveRequestNotification(leaveRequest, recipient, type)
+          this.sendLeaveRequestNotification(leaveRequest, recipient, type),
         );
       }
     }
-    
+
     await Promise.all(promises);
   }
 
   private getEmailTemplate(
     leaveRequest: LeaveRequest,
     recipient: User,
-    type: 'submitted' | LeaveRequestStatus
+    type: 'submitted' | LeaveRequestStatus,
   ): EmailTemplate {
     const employee = leaveRequest.user;
-    const startDate = new Date(leaveRequest.start_date).toLocaleDateString();
-    const endDate = new Date(leaveRequest.end_date).toLocaleDateString();
+    const startDate = new Date(leaveRequest.startDate).toLocaleDateString();
+    const endDate = new Date(leaveRequest.endDate).toLocaleDateString();
     const leaveType = leaveRequest.leaveType?.name || 'Leave';
-    
+
     let subject: string;
     let statusColor: string;
     let statusText: string;
@@ -265,20 +270,28 @@ export class EmailNotificationService {
               </div>
             </div>
             
-            ${leaveRequest.reason ? `
+            ${
+              leaveRequest.reason
+                ? `
               <div class="reason-section">
                 <div class="reason-label">Reason for Leave</div>
                 <div class="reason-text">${leaveRequest.reason}</div>
               </div>
-            ` : ''}
+            `
+                : ''
+            }
             
-            ${type === 'submitted' ? `
+            ${
+              type === 'submitted'
+                ? `
               <div style="text-align: center;">
                 <a href="${this.configService.get('FRONTEND_URL', 'http://localhost:4200')}/approves" class="action-button">
                   Review Request
                 </a>
               </div>
-            ` : ''}
+            `
+                : ''
+            }
           </div>
           
           <div class="footer">
@@ -322,7 +335,7 @@ export class EmailNotificationService {
         `,
         text: 'Test Email - This is a test email from the Leave Management System.',
       });
-      
+
       console.log(`Test email sent to ${to}`);
     } catch (error) {
       console.error('Failed to send test email:', error);

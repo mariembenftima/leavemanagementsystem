@@ -91,23 +91,40 @@ export class ApiService {
   }
 
 
-  getAllPendingRequests(): Observable<number> {
-    return this.http
-      .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
-      .pipe(map((res) => res.data.filter((r) => r.status === 'pending').length));
-  }
+getAllPendingRequests(): Observable<number> {
+  return this.http
+    .get<any>(`${this.apiUrl}/leave-requests/all`)
+    .pipe(
+      map((res) => {
+        const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+        return list.filter((r: any) => r.status === 'PENDING').length;
+      })
+    );
+}
+
 
   getAllRejectedRequests(): Observable<number> {
-    return this.http
-      .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
-      .pipe(map((res) => res.data.filter((r) => r.status === 'rejected').length));
-  }
+  return this.http
+    .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
+    .pipe(
+      map((res) => {
+        const list = Array.isArray(res?.data) ? res.data : [];
+        return list.filter((r) => r.status?.toUpperCase() === 'REJECTED').length;
+      })
+    );
+}
 
-  getAllApprovedRequests(): Observable<number> {
-    return this.http
-      .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
-      .pipe(map((res) => res.data.filter((r) => r.status === 'approved').length));
-  }
+getAllApprovedRequests(): Observable<number> {
+  return this.http
+    .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
+    .pipe(
+      map((res) => {
+        const list = Array.isArray(res?.data) ? res.data : [];
+        return list.filter((r) => r.status?.toUpperCase() === 'APPROVED').length;
+      })
+    );
+}
+
   getAllLeaveRequests(): Observable<LeaveRequest[]> {
     return this.http
       .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)

@@ -1,4 +1,4 @@
-#!/usr/bin/env powershell
+
 
 # Simple Database Setup Script for Leave Management System
 Write-Host "=== Leave Management System Database Setup ===" -ForegroundColor Green

@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { LeaveRequest, LeaveRequestStatus } from './entities/leave-request.entity';
+import {
+  LeaveRequest,
+  LeaveRequestStatus,
+} from './entities/leave-request.entity';
 import { User } from '../users/entities/users.entity';
 import { EmailNotificationService } from '../notifications/email-notification.service';
 
@@ -13,7 +16,7 @@ export class LeaveRequestsService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private emailNotificationService: EmailNotificationService,
-  ) {}
+  ) { }
 
   async createLeaveRequest(
     createLeaveRequestDto: any,
@@ -40,7 +43,7 @@ export class LeaveRequestsService {
     userId: string,
   ): Promise<LeaveRequest> {
     const leaveRequest = await this.leaveRequestRepository.findOne({
-      where: { id },
+      where: { id: +id },
       relations: ['user', 'leaveType'],
     });
 
@@ -49,10 +52,10 @@ export class LeaveRequestsService {
     }
 
     leaveRequest.status = status;
-    leaveRequest.reviewedBy = { id: userId } as User;
-    leaveRequest.reviewed_at = new Date();
-
-    const updatedLeaveRequest = await this.leaveRequestRepository.save(leaveRequest);
+    leaveRequest.approvedBy = userId;
+    leaveRequest.approvedAt = new Date();
+    const updatedLeaveRequest =
+      await this.leaveRequestRepository.save(leaveRequest);
 
     // Send email notification to employee
     await this.sendNotificationToEmployee(updatedLeaveRequest, status);
@@ -64,14 +67,14 @@ export class LeaveRequestsService {
     return this.leaveRequestRepository.find({
       where: { user: { id: userId } },
       relations: ['leaveType'],
-      order: { created_at: 'DESC' },
+      order: { createdAt: 'DESC' },
     });
   }
 
   async getAllLeaveRequests(): Promise<LeaveRequest[]> {
     return this.leaveRequestRepository.find({
       relations: ['user', 'leaveType'],
-      order: { created_at: 'DESC' },
+      order: { createdAt: 'DESC' },
     });
   }
 
@@ -79,16 +82,18 @@ export class LeaveRequestsService {
     return this.leaveRequestRepository.find({
       where: { status: LeaveRequestStatus.PENDING },
       relations: ['user', 'leaveType'],
-      order: { created_at: 'ASC' },
+      order: { createdAt: 'ASC' },
     });
   }
 
-  private async sendNotificationToHR(leaveRequest: LeaveRequest): Promise<void> {
+  private async sendNotificationToHR(
+    leaveRequest: LeaveRequest,
+  ): Promise<void> {
     try {
       // Get all users and filter by roles (since TypeORM doesn't support array contains directly)
       const allUsers = await this.userRepository.find();
-      const hrUsers = allUsers.filter(user => 
-        user.roles.includes('hr') || user.roles.includes('admin')
+      const hrUsers = allUsers.filter(
+        (user) => user.roles.includes('hr') || user.roles.includes('admin'),
       );
 
       // Send notification to each HR/Admin user
@@ -136,8 +141,8 @@ export class LeaveRequestsService {
         employee: {
           name: 'John Doe',
           email: 'john.doe@company.com',
-          department: 'Engineering'
-        }
+          department: 'Engineering',
+        },
       },
       {
         id: '2',
@@ -151,8 +156,8 @@ export class LeaveRequestsService {
         employee: {
           name: 'Jane Smith',
           email: 'jane.smith@company.com',
-          department: 'Marketing'
-        }
+          department: 'Marketing',
+        },
       },
       {
         id: '3',
@@ -166,9 +171,9 @@ export class LeaveRequestsService {
         employee: {
           name: 'Mike Johnson',
           email: 'mike.johnson@company.com',
-          department: 'Sales'
-        }
-      }
+          department: 'Sales',
+        },
+      },
     ];
   }
 }

@@ -11,16 +11,16 @@ import { User } from '../../users/entities/users.entity';
 import { LeaveTypeEntity } from '../../leave-types/entities/leave-type.entity';
 
 export enum LeaveRequestStatus {
-  PENDING = 'pending',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  CANCELLED = 'cancelled',
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  CANCELLED = 'CANCELLED',
 }
 
 @Entity('leave_requests')
 export class LeaveRequest {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn() // SERIAL in DB
+  id: number;
 
   @ManyToOne(() => User, { eager: true })
   @JoinColumn({ name: 'user_id' })
@@ -30,47 +30,41 @@ export class LeaveRequest {
   @JoinColumn({ name: 'leave_type_id' })
   leaveType: LeaveTypeEntity;
 
-  @Column({ type: 'date' })
-  start_date: Date;
+  @Column({ name: 'start_date', type: 'date' })
+  startDate: Date;
 
-  @Column({ type: 'date' })
-  end_date: Date;
+  @Column({ name: 'end_date', type: 'date' })
+  endDate: Date;
 
-  @Column({ type: 'int' })
-  days_requested: number;
+  @Column({ name: 'total_days', type: 'int' })
+  totalDays: number;
 
   @Column({
-    type: 'enum',
-    enum: LeaveRequestStatus,
+    name: 'status',
+    type: 'varchar',
+    length: 20,
     default: LeaveRequestStatus.PENDING,
   })
   status: LeaveRequestStatus;
 
-  @Column({ type: 'text', nullable: true })
-  reason: string;
+  @Column({ name: 'reason', type: 'text', nullable: true })
+  reason?: string;
 
-  @Column({ type: 'text', nullable: true })
-  rejection_reason: string;
+  @Column({ name: 'rejection_reason', type: 'text', nullable: true })
+  rejectionReason?: string;
 
-  @Column({ type: 'boolean', default: false })
-  ishalfday: boolean;
+  @Column({ name: 'approved_by', type: 'uuid', nullable: true })
+  approvedBy?: string;
 
-  @Column({ type: 'text', nullable: true })
-  emergencycontact: string;
+  @Column({ name: 'approved_at', type: 'timestamp', nullable: true })
+  approvedAt?: Date;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  manageremail: string;
+  @Column({ name: 'is_half_day', type: 'boolean', default: false })
+  isHalfDay: boolean;
 
-  @ManyToOne(() => User, { nullable: true })
-  @JoinColumn({ name: 'reviewed_by' })
-  reviewedBy: User;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
-  reviewed_at: Date;
-
-  @CreateDateColumn()
-  created_at: Date;
-
-  @UpdateDateColumn()
-  updated_at: Date;
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt: Date;
 }

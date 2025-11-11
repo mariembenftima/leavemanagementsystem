@@ -25,7 +25,12 @@ export class UsersController {
   ) {}
   @Get()
   async getUser() {
-    return this.usersService.getUser();
+    const users = await this.usersService.getUser();
+    return {
+      success: true,
+      data: users,
+      message: 'Users retrieved successfully',
+    };
   }
 
   @Get(':id')
@@ -77,7 +82,8 @@ export class UsersController {
       }
 
       // Upload and update profile picture
-      const profilePicUrl = await this.profilePictureService.uploadProfilePicture(id, file);
+      const profilePicUrl =
+        await this.profilePictureService.uploadProfilePicture(id, file);
 
       return { profilePicUrl };
     } catch (error) {
