@@ -1,21 +1,32 @@
+import { Team } from "./team.model";
+
 export interface EmployeeProfile {
-  id: string;
+  id: number;
   userId: string;
   employeeId: string;
-  department: string;
-  designation: string;
-  joinDate: string;
-  gender: string;
-  dateOfBirth: string;
-  phone: string;
-  emergencyContactName: string;
-  emergencyContactPhone: string;
-  address: string;
-  maritalStatus: string;
-  nationality: string;
-  salary: number;
-  bankAccountNumber: string;
-  bankName: string;
+  firstName: string;
+  lastName: string;
+  fullname: string; 
+  position?: string;
+  department?: string;
+  managerId?: string;
+  hireDate?: string;
+  salary?: number;
+  dateOfBirth?: string;
+  bankAccountNumber?: string;
+  socialSecurityNumber?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  gender?: string;
+  nationality?: string; 
+  maritalStatus?: string;  
+  phone?: string;  
+  email: string;  
+  roles: string[];
+  address?: string; 
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  avatarUrl?: string;
+  team?: Team | null;
 }

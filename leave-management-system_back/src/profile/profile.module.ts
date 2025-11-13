@@ -14,9 +14,14 @@ import { LeaveBalancesModule } from '../leave-balances/leave-balances.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([EmployeeProfile, Activity, Performance, User]),
-    LeaveBalancesModule
+    LeaveBalancesModule,
   ],
-  providers: [ProfileService, ProfileRepository, ActivityRepository, PerformanceRepository],
+  providers: [
+    ProfileService,
+    ProfileRepository,
+    ActivityRepository,
+    PerformanceRepository,
+  ],
   controllers: [ProfileController],
   exports: [ProfileService],
 })

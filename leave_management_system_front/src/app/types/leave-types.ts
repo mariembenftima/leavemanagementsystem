@@ -1,4 +1,4 @@
-import { LeaveType } from './leave-type.model';
+import { LeaveType } from "../private/types/user/leaveRequestsType/leave-type.model";
 
 export const LEAVE_TYPES: LeaveType[] = [
   { id: 'annual', name: 'Annual Leave', max_days: 24, color: '#10b981' },

@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { User } from '../types/user.model';
 import { EmployeeProfile } from '../types/employee-profile.model';
-import { EmployeeProfileData } from '../private/types/user/profileType/employee-profile-data.type';
 import { LeaveRequest, LeaveType } from '../private/services/api.service';
 import { LeaveBalance } from '../types/leave-balance.model';
 import { Activity } from '../types/activity.model';
@@ -63,8 +62,8 @@ export class DataMapperService {
     return this.fromApi<EmployeeProfile>(data);
   }
 
-  mapEmployeeProfileData(data: any): EmployeeProfileData {
-    return this.fromApi<EmployeeProfileData>(data);
+  mapEmployeeProfileData(data: any): EmployeeProfile {
+    return this.fromApi<EmployeeProfile>(data);
   }
 
   mapLeaveType(data: any): LeaveType {

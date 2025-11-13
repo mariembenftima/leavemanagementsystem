@@ -48,7 +48,6 @@ export class UsersController {
     @Body() updateUserDto: UpdateUsersDto,
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
-    // Convert dateOfBirth to Date if it's a string
     const dto: Partial<CreateUsersDto> = {
       ...updateUserDto,
       dateOfBirth: updateUserDto.dateOfBirth
@@ -69,29 +68,24 @@ export class UsersController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     try {
-      // Validate file exists
       if (!file) {
         throw new BadRequestException('No file uploaded');
       }
 
-      // Validate file type and size
       if (!ProfilePictureService.validateFile(file)) {
         throw new BadRequestException(
           'Invalid file. Only JPG, JPEG, PNG, WEBP files under 5MB are allowed',
         );
       }
 
-      // Upload and update profile picture
       const profilePicUrl =
         await this.profilePictureService.uploadProfilePicture(id, file);
 
       return { profilePicUrl };
     } catch (error) {
-      console.error('❌ Profile picture upload error:', error);
-      if (error.message.includes('not found')) {
-        throw new BadRequestException(error.message);
-      }
-      throw error;
+      throw new BadRequestException(
+        `Profile picture upload failed: ${error.message}`,
+      );
     }
   }
 }

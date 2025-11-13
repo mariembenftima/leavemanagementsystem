@@ -4,6 +4,7 @@ import {
   Column,
   ManyToOne,
   Unique,
+  JoinColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
 import { LeaveTypeEntity } from '../../leave-types/entities/leave-type.entity';
@@ -14,14 +15,18 @@ export class LeaveBalanceEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => User, (user) => user.id, { eager: true })
+  @ManyToOne(() => User, (user) => user.leaveBalances, { eager: true })
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToOne(() => LeaveTypeEntity, (lt) => lt.id, { eager: true })
+  @ManyToOne(() => LeaveTypeEntity)
+  @JoinColumn({ name: 'leave_type_id' })
   leaveType: LeaveTypeEntity;
 
   @Column('int')
   year: number;
+  @Column({ name: 'total', type: 'int' })
+  total: number;
 
   @Column('int')
   carryover: number;

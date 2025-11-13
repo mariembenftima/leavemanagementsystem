@@ -1,5 +1,5 @@
 import { TeamEntity } from '../../teams/entities/team.entity';
-import { ManyToOne, JoinColumn } from 'typeorm';
+import { ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import {
   Column,
   CreateDateColumn,
@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { IUser } from '../types/interfaces/users.interfaces';
+import { LeaveBalanceEntity } from 'src/leave-balances/entities/leave-balance.entity';
 
 @Entity('users')
 export class User implements IUser {
@@ -62,4 +63,6 @@ export class User implements IUser {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+  @OneToMany(() => LeaveBalanceEntity, (lb) => lb.user)
+  leaveBalances: LeaveBalanceEntity[];
 }

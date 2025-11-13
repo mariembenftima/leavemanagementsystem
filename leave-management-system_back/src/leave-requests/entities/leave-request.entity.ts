@@ -19,14 +19,14 @@ export enum LeaveRequestStatus {
 
 @Entity('leave_requests')
 export class LeaveRequest {
-  @PrimaryGeneratedColumn() // SERIAL in DB
+  @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => User, { eager: true })
+  @ManyToOne(() => User, { eager: false })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToOne(() => LeaveTypeEntity, { eager: true })
+  @ManyToOne(() => LeaveTypeEntity, { eager: false })
   @JoinColumn({ name: 'leave_type_id' })
   leaveType: LeaveTypeEntity;
 
@@ -60,11 +60,32 @@ export class LeaveRequest {
   approvedAt?: Date;
 
   @Column({ name: 'is_half_day', type: 'boolean', default: false })
-  isHalfDay: boolean;
+  is_half_day: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+  @Column({
+    name: 'manager_email',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  managerEmail?: string;
+
+  @Column({
+    name: 'emergency_contact',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
+  emergencyContact?: string;
+  @Column({
+    name: 'days_requested',
+    type: 'int',
+    nullable: true,
+  })
+  daysRequested?: number;
 }

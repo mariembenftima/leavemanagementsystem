@@ -16,6 +16,7 @@ import {
 import { LeaveRequestsService } from './leave-requests.service';
 import { LeaveRequestStatus } from './entities/leave-request.entity';
 import { AuthenticatedRequest } from 'src/auth/types/authenticated-request';
+import { CreateLeaveRequestDto } from './types/dtos/create-leave-request.dto';
 
 @ApiTags('leave-requests')
 @ApiBearerAuth()
@@ -23,14 +24,11 @@ import { AuthenticatedRequest } from 'src/auth/types/authenticated-request';
 export class LeaveRequestsController {
   constructor(private readonly leaveRequestsService: LeaveRequestsService) {}
 
-  // 🔹 Get all leave requests (Admin/HR)
-
   @ApiOperation({ summary: 'Get all leave requests (HR/Admin only)' })
   @ApiResponse({
     status: 200,
     description: 'All leave requests retrieved successfully',
   })
-  // leave-requests.controller.ts
   @Get('all')
   async getAllLeaveRequests() {
     try {
@@ -42,12 +40,11 @@ export class LeaveRequestsController {
         message: 'All leave requests retrieved successfully',
       };
     } catch (err) {
-      console.error('❌ /leave-requests/all failed:', err.message, err.stack); // 👈 show real cause
+      console.error('❌ /leave-requests/all failed:', err.message, err.stack);
       throw err;
     }
   }
 
-  // 🔹 Get only pending requests
   @Get('pending')
   @ApiOperation({ summary: 'Get all pending leave requests' })
   @ApiResponse({
@@ -64,8 +61,6 @@ export class LeaveRequestsController {
     };
   }
 
-  // 🔹 Get current user's leave requests
-
   @ApiOperation({ summary: 'Get current user’s leave requests' })
   @ApiResponse({
     status: 200,
@@ -80,27 +75,27 @@ export class LeaveRequestsController {
     };
   }
 
-  // 🔹 Create new leave request
   @Post()
   @ApiOperation({ summary: 'Create a new leave request' })
   @ApiResponse({
     status: 201,
     description: 'Leave request created successfully',
   })
-  async createLeaveRequest(@Body() dto: any, @Request() req) {
+  async createLeaveRequest(@Body() dto: CreateLeaveRequestDto, @Request() req) {
     const userId = (req.user as { id: string })?.id;
+
     const createdRequest = await this.leaveRequestsService.createLeaveRequest(
       dto,
       userId,
     );
+
     return {
       success: true,
-      data: createdRequest,
       message: 'Leave request created successfully',
+      data: createdRequest,
     };
   }
 
-  // 🔹 Update status (approve/reject)
   @Put(':id/status')
   async updateLeaveRequestStatus(
     @Param('id') id: string,

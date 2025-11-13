@@ -1,5 +1,7 @@
 export interface LeaveSummary {
-  total: number;
-  used: number;
-  remaining: number;
+  leaveType: string;
+  totalDays: number;
+  usedDays: number;
+  remainingDays: number;
+  percentageUsed: number;
 }

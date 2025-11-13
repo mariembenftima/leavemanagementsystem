@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -7,34 +7,51 @@ import {
 } from './entities/leave-request.entity';
 import { User } from '../users/entities/users.entity';
 import { EmailNotificationService } from '../notifications/email-notification.service';
+import { LeaveTypeEntity } from 'src/leave-types/entities/leave-type.entity';
+import { CreateLeaveRequestDto } from './types/dtos/create-leave-request.dto';
 
 @Injectable()
 export class LeaveRequestsService {
   constructor(
     @InjectRepository(LeaveRequest)
-    private leaveRequestRepository: Repository<LeaveRequest>,
+    private readonly leaveRequestRepository: Repository<LeaveRequest>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private emailNotificationService: EmailNotificationService,
-  ) { }
+    @InjectRepository(LeaveTypeEntity)
+    private leaveTypeRepository: Repository<any>,
+  ) {}
 
   async createLeaveRequest(
-    createLeaveRequestDto: any,
+    dto: CreateLeaveRequestDto,
     userId: string,
   ): Promise<LeaveRequest> {
-    const leaveRequest = this.leaveRequestRepository.create({
-      ...createLeaveRequestDto,
+    // Find the leave type by name or ID
+    const leaveType: LeaveTypeEntity | null =
+      await this.leaveTypeRepository.findOne({
+        where: { name: dto.leaveType },
+      });
+
+    if (!leaveType) {
+      throw new BadRequestException(`Leave type '${dto.leaveType}' not found`);
+    }
+
+    // Create the entity instance
+    const leaveRequest: LeaveRequest = this.leaveRequestRepository.create({
       user: { id: userId },
+      leaveType,
+      startDate: new Date(dto.startDate),
+      endDate: new Date(dto.endDate),
+      reason: dto.reason,
+      is_half_day: !!dto.isHalfDay,
+      totalDays: dto.totalDays,
       status: LeaveRequestStatus.PENDING,
     });
 
-    const result = await this.leaveRequestRepository.save(leaveRequest);
-    const savedLeaveRequest = Array.isArray(result) ? result[0] : result;
-
-    // Send email notification to HR/Admin
-    await this.sendNotificationToHR(savedLeaveRequest);
-
-    return savedLeaveRequest;
+    // Save to DB
+    const saved: LeaveRequest =
+      await this.leaveRequestRepository.save(leaveRequest);
+    return saved;
   }
 
   async updateLeaveRequestStatus(
@@ -57,7 +74,6 @@ export class LeaveRequestsService {
     const updatedLeaveRequest =
       await this.leaveRequestRepository.save(leaveRequest);
 
-    // Send email notification to employee
     await this.sendNotificationToEmployee(updatedLeaveRequest, status);
 
     return updatedLeaveRequest;
@@ -90,13 +106,11 @@ export class LeaveRequestsService {
     leaveRequest: LeaveRequest,
   ): Promise<void> {
     try {
-      // Get all users and filter by roles (since TypeORM doesn't support array contains directly)
       const allUsers = await this.userRepository.find();
       const hrUsers = allUsers.filter(
         (user) => user.roles.includes('hr') || user.roles.includes('admin'),
       );
 
-      // Send notification to each HR/Admin user
       for (const hrUser of hrUsers) {
         await this.emailNotificationService.sendLeaveRequestNotification(
           leaveRequest,
@@ -106,7 +120,6 @@ export class LeaveRequestsService {
       }
     } catch (error) {
       console.error('Failed to send HR notification:', error);
-      // Don't throw error to avoid breaking the leave request creation
     }
   }
 
@@ -126,7 +139,6 @@ export class LeaveRequestsService {
     }
   }
 
-  // Mock data methods for development
   async getMockLeaveRequests(): Promise<any[]> {
     return [
       {

@@ -29,7 +29,7 @@
                 <div class="profile-role text-uppercase">
                   {{ employeeData.roles }}
                 </div>
-                <div class="profile-id">{{ employeeData.employee_id }}</div>
+                <div class="profile-id">{{ employeeData.userId }}</div>
 
                 <div class="stats-grid">
                   <div class="stat-item">
@@ -67,20 +67,20 @@
                     <span class="leave-type text-capitalize">{{ key.key }} Leave</span>
                     <div class="leave-numbers">
                       <span class="leave-badge badge-used">
-                        Used: {{ key.value.used }}
+                        Used: {{ key.value.usedDays }}
                       </span>
                       <span class="leave-badge badge-remaining">
                         Remaining:
                         {{
-                        (key.value.carryover + key.value.used) - key.value.used
+                        (key.value.carryOverDays + key.value.usedDays) - key.value.usedDays
                         }}
                       </span>
                     </div>
                   </div>
                   <div class="progress-bar">
                     <div class="progress-fill" [style.width]="
-                        (key.value.used /
-                          (key.value.carryover + key.value.used || 1)) * 100 + '%'
+                        (key.value.usedDays /
+                          (key.value.carryOverDays + key.value.usedDays || 1)) * 100 + '%'
                       "></div>
                   </div>
                 </div>
@@ -101,12 +101,12 @@
                 </div>
                 <div class="info-item">
                   <div class="info-label">Designation</div>
-                  <div class="info-value">{{ employeeData.designation }}</div>
+                  <div class="info-value">{{ employeeData.position }}</div>
                 </div>
                 <div class="info-item">
                   <div class="info-label">Join Date</div>
                   <div class="info-value">
-                    {{ employeeData.join_date | date: 'longDate' }}
+                    {{ employeeData.hireDate | date: 'longDate' }}
                   </div>
                 </div>
                 <div class="info-item">
@@ -119,7 +119,7 @@
                 </div>
                 <div class="info-item">
                   <div class="info-label">Marital Status</div>
-                  <div class="info-value">{{ employeeData.marital_status }}</div>
+                  <div class="info-value">{{ employeeData.maritalStatus }}</div>
                 </div>
               </div>
             </div>
@@ -146,9 +146,9 @@
                 </div>
                 <div class="info-item">
                   <div class="info-label">Emergency Contact</div>
-                  <a [href]="'tel:' + employeeData.emergency_contact_phone" class="contact-info">
+                  <a [href]="'tel:' + employeeData.emergencyContactPhone" class="contact-info">
                     <i class="fas fa-phone-alt"></i>
-                    {{ employeeData.emergency_contact_phone }}
+                    {{ employeeData.emergencyContactPhone }}
                   </a>
                 </div>
                 <div class="info-item">

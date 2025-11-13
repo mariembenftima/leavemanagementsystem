@@ -6,12 +6,15 @@ import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 export class CalendarController {
   @Get('events')
   @ApiOperation({ summary: 'Get calendar events for a specific month/year' })
-  @ApiResponse({ status: 200, description: 'Calendar events retrieved successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Calendar events retrieved successfully',
+  })
   @ApiQuery({ name: 'month', required: false, type: Number })
   @ApiQuery({ name: 'year', required: false, type: Number })
   async getCalendarEvents(
     @Query('month') month?: number,
-    @Query('year') year?: number
+    @Query('year') year?: number,
   ) {
     // Return mock calendar events for now
     const mockEvents = [
@@ -22,7 +25,7 @@ export class CalendarController {
         startDate: '2025-09-15',
         endDate: '2025-09-17',
         employeeName: 'Sarah Johnson',
-        status: 'approved'
+        status: 'approved',
       },
       {
         id: '2',
@@ -31,7 +34,7 @@ export class CalendarController {
         startDate: '2025-09-20',
         endDate: '2025-09-20',
         employeeName: 'David Wilson',
-        status: 'approved'
+        status: 'approved',
       },
       {
         id: '3',
@@ -40,14 +43,14 @@ export class CalendarController {
         startDate: '2025-09-25',
         endDate: '2025-09-26',
         employeeName: 'Emily Davis',
-        status: 'pending'
-      }
+        status: 'pending',
+      },
     ];
 
     return {
       success: true,
       data: mockEvents,
-      message: 'Calendar events retrieved successfully'
+      message: 'Calendar events retrieved successfully',
     };
   }
 }

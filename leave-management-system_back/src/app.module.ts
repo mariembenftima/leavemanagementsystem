@@ -19,6 +19,7 @@ import { CalendarModule } from './calendar/calendar.module';
 import { LeaveRequestsModule } from './leave-requests/leave-requests.module';
 import { NotificationsModule } from './notifications/notifications.module';
 
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -53,6 +54,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     NotificationsModule,
     TerminusModule,
     HttpModule,
+   
   ],
   controllers: [AppController],
   providers: [AppService],

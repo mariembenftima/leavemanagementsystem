@@ -1,5 +1,5 @@
-import { AdjustBalanceDto } from "../dtos/adjust-balance.dto";
-import { CreateBalanceDto } from "../dtos/create-balance.dto";
+import { AdjustBalanceDto } from '../dtos/adjust-balance.dto';
+import { CreateBalanceDto } from '../dtos/create-balance.dto';
 
 export abstract class LeaveBalancesPort {
   abstract create(dto: CreateBalanceDto);

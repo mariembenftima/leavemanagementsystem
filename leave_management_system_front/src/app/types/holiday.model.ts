@@ -1,9 +1,8 @@
 export interface Holiday {
-  id: string;
+  id: number;
   name: string;
-  date: string;
-  type: string;
-  isOptional: boolean;
+  date: string;               
+  type: 'COMPANY' | 'NATIONAL' | 'RELIGIOUS';
   description?: string;
   createdAt: string;
 }

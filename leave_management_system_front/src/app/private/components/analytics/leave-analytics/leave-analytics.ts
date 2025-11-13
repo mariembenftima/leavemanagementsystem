@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../../../services/api.service';
 import { AuthService } from '../../../services/auth.service';
+import { interval, switchMap } from 'rxjs';
 
 interface LeaveTrend {
   month: string;
@@ -185,17 +186,18 @@ export class LeaveAnalytics implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadAnalyticsData();
-  }
-private updateTrendsChart(): void {
-  if (!this.leaveTrendsChart?.data) return;
+  this.loadAnalyticsData();
 
-  this.leaveTrendsChart.data.labels = this.leaveTrendsData.map(t => t.month);
-  this.leaveTrendsChart.data.datasets[0].data = this.leaveTrendsData.map(t => t.approved);
-  this.leaveTrendsChart.data.datasets[1].data = this.leaveTrendsData.map(t => t.pending);
-  this.leaveTrendsChart.data.datasets[2].data = this.leaveTrendsData.map(t => t.rejected);
-
-  this.refreshChartInstance(this.leaveTrendsChart);
+  interval(20000)
+    .pipe(switchMap(() => this.apiService.getAllLeaveRequests()))
+    .subscribe((leaves) => {
+      this.computeLeaveTrends(leaves);
+      this.computeDepartmentStats(leaves);
+      this.computeSeasonalPatterns(leaves);
+      this.computeTotalStats(leaves);
+      this.updateDepartmentChart();
+      this.updateSeasonalChart();
+    });
 }
 
 private updateDepartmentChart(): void {
@@ -243,7 +245,6 @@ private async loadAnalyticsData(): Promise<void> {
     this.computeSeasonalPatterns(leaves);
     this.computeTotalStats(leaves);
 
-    this.updateTrendsChart();
     this.updateDepartmentChart();
     this.updateSeasonalChart();
   } catch (err) {
@@ -257,7 +258,7 @@ private computeLeaveTrends(leaves: any[]): void {
   const monthlyData: Record<string, { approved: number; pending: number; rejected: number }> = {};
 
   leaves.forEach(l => {
-    const month = new Date(l.start_date).toLocaleString('en', { month: 'short' });
+    const month = new Date(l.startDate).toLocaleString('en', { month: 'short' });
     if (!monthlyData[month]) monthlyData[month] = { approved: 0, pending: 0, rejected: 0 };
     const status = l.status?.toLowerCase();
     if (status === 'approved' || status === 'pending' || status === 'rejected') {
@@ -281,11 +282,11 @@ private computeDepartmentStats(leaves: any[]): void {
     if (!deptMap[dept]) deptMap[dept] = { total: 0, approved: 0, pending: 0, totalDays: 0 };
 
     deptMap[dept].total++;
-    if (l.status === 'approved') deptMap[dept].approved++;
-    if (l.status === 'pending') deptMap[dept].pending++;
+    if (l.status === 'APPROVED') deptMap[dept].approved++;
+    if (l.status === 'PENDING') deptMap[dept].pending++;
 
-    const start = new Date(l.start_date);
-    const end = new Date(l.end_date);
+    const start = new Date(l.startDate);
+    const end = new Date(l.endDate);
     const diffDays = (end.getTime() - start.getTime()) / (1000 * 3600 * 24) + 1;
     deptMap[dept].totalDays += diffDays;
   });
@@ -303,7 +304,7 @@ private computeSeasonalPatterns(leaves: any[]): void {
   const quarters = { 'Q1 (Jan–Mar)': 0, 'Q2 (Apr–Jun)': 0, 'Q3 (Jul–Sep)': 0, 'Q4 (Oct–Dec)': 0 };
 
   leaves.forEach(l => {
-    const month = new Date(l.start_date).getMonth();
+    const month = new Date(l.startDate).getMonth();
     if (month <= 2) quarters['Q1 (Jan–Mar)']++;
     else if (month <= 5) quarters['Q2 (Apr–Jun)']++;
     else if (month <= 8) quarters['Q3 (Jul–Sep)']++;

@@ -3,8 +3,8 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import { Router } from '@angular/router';
-import { environment } from '../../../environments/environment';
-import { User } from '../../types/user.model';
+import { EmployeeProfile } from '../../types/employee-profile.model';
+import { environment } from '../../../environments/environment.development';
 
 
 export interface LoginRequest {
@@ -16,7 +16,7 @@ export interface LoginResponse {
   success: boolean;
   data: {
     access_token: string;
-    user: User;
+    user: EmployeeProfile;
   };
   message?: string;
 }
@@ -26,7 +26,7 @@ export interface LoginResponse {
 })
 export class AuthService {
   private apiUrl = environment.apiUrl;
-  private currentUserSubject = new BehaviorSubject<User | null>(null);
+  private currentUserSubject = new BehaviorSubject<EmployeeProfile | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
   public isLoggedIn$: Observable<boolean> = this.currentUser$.pipe(map((u) => !!u));
 
@@ -42,7 +42,7 @@ export class AuthService {
             parsed.roles = parsed.roles.split(',').map((r: string) => r.trim());
           }
         }
-        this.currentUserSubject.next(parsed as User);
+        this.currentUserSubject.next(parsed as EmployeeProfile);
       } catch (err) {
         console.warn('Failed to parse currentUser from storage', err);
         this.currentUserSubject.next(null);
@@ -68,7 +68,7 @@ export class AuthService {
               console.warn('Failed to write auth data to storage', err);
             }
 
-            this.currentUserSubject.next(user as User);
+            this.currentUserSubject.next(user as EmployeeProfile);
           }
         })
       );
@@ -79,12 +79,12 @@ export class AuthService {
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
   }
-  getCurrentUser(): User | null {
+  getCurrentUser(): EmployeeProfile | null {
     return this.currentUserSubject.value;
   }
 
   getCurrentUserId(): string | null {
-    return this.getCurrentUser()?.id || null;
+    return this.getCurrentUser()?.userId || null;
   }
 
   getToken(): string | null {
@@ -101,7 +101,7 @@ export class AuthService {
     return (user.roles as string).split(',').map((r) => r.trim()).includes(role);
   }
 
-  setCurrentUser(user: User): void {
+  setCurrentUser(user: EmployeeProfile): void {
     localStorage.setItem('currentUser', JSON.stringify(user));
     this.currentUserSubject.next(user);
   }
@@ -112,12 +112,11 @@ export class AuthService {
       Authorization: `Bearer ${token}`,
     });
   }
-  getProfileFromServer(): Observable<User> {
-    // Backend exposes current user at GET /auth/me and returns { success, user, message }
+  getProfileFromServer(): Observable<EmployeeProfile> {
     return this.http.get<any>(`${this.apiUrl}/auth/me`, {
       headers: this.authHeaders(),
     }).pipe(
-      map((res) => res.user as User)
+      map((res) => res.user as EmployeeProfile)
     );
   }
 }

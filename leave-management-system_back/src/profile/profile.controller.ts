@@ -1,5 +1,12 @@
-import { Controller, Get, Req, UseGuards, Inject } from '@nestjs/common';
-import { Request } from 'express';
+import {
+  Controller,
+  Get,
+  Req,
+  UseGuards,
+  NotFoundException,
+  UnauthorizedException,
+  Param,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -9,33 +16,65 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 import { ProfileService } from './profile.service';
+import { Request } from 'express';
+
+// 🔹 Custom request type that includes `user`
+interface AuthenticatedRequest extends Request {
+  user: any;
+}
 
 @ApiTags('profile')
 @Controller('profile')
 export class ProfileController {
   constructor(
     private readonly leaveBalancesService: LeaveBalancesService,
-    private readonly profileService: ProfileService,
+    private readonly profileService: ProfileService, // ✅ readonly ensures DI type safety
   ) {}
 
-  @Get('dashboard')
+  // 🔹 Fetch profile by userId (admin or HR use)
   @UseGuards(JwtAuthGuard)
+  @Get(':userId')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get a profile by user ID (admin/HR)' })
+  async getProfileById(
+    @Param('userId') userId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const requester = req.user;
+    if (!requester)
+      throw new UnauthorizedException('User not found in request');
+
+    const profile = await this.profileService.getProfile(userId, requester);
+    if (!profile) throw new NotFoundException('Profile not found');
+
+    return {
+      success: true,
+      data: profile,
+      message: 'Profile retrieved successfully',
+    };
+  }
+
+  // 🔹 Dashboard data for current user
+  @UseGuards(JwtAuthGuard)
+  @Get('dashboard')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get dashboard data for the current user' })
   @ApiResponse({
     status: 200,
     description: 'Dashboard data retrieved successfully',
   })
-  async getDashboardData(@Req() req: Request) {
-    // Get user info from JWT payload
-    const user = (req as any).user;
+  async getDashboardData(@Req() req: AuthenticatedRequest) {
+    const user = req.user;
+    if (!user) throw new UnauthorizedException('Missing user in JWT payload');
+
     console.log('🔍 Dashboard request for user:', user);
 
-    // Fetch profile and leave balances
+    // Fetch related data
     let profileData: any = null;
     let leaveBalance: any = null;
     let recentActivities: any[] = [];
     let performance: any = null;
+
     try {
       profileData = await this.profileService.getProfile(
         user.id || user.userId,
@@ -44,7 +83,7 @@ export class ProfileController {
       leaveBalance = await this.leaveBalancesService.findByUserId(
         user.id || user.userId,
       );
-      // Optionally fetch recent activities and performance if available
+
       if (this.profileService.activityRepository) {
         recentActivities =
           await this.profileService.activityRepository.getRecentActivities(
@@ -52,6 +91,7 @@ export class ProfileController {
             5,
           );
       }
+
       if (this.profileService.performanceRepository) {
         performance =
           await this.profileService.performanceRepository.getLatestPerformance(
@@ -59,8 +99,7 @@ export class ProfileController {
           );
       }
     } catch (error) {
-      console.log('⚠️ Failed to fetch profile/leave/performance:', error);
-      // Fallback to defaults
+      console.warn('⚠️ Failed to fetch profile/leave/performance:', error);
       leaveBalance = {
         annual: { total: 25, used: 5, remaining: 20 },
         sick: { total: 12, used: 2, remaining: 10 },
@@ -68,7 +107,6 @@ export class ProfileController {
       };
     }
 
-    // Compose dashboard data
     const dashboardData = {
       user: {
         name:
@@ -78,11 +116,9 @@ export class ProfileController {
           `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
           'Current User',
         email: profileData?.email || user.email || 'user@company.com',
-        role: user.roles
-          ? Array.isArray(user.roles)
-            ? user.roles[0]
-            : user.roles
-          : user.role || 'Employee',
+        role: Array.isArray(user.roles)
+          ? user.roles[0]
+          : user.roles || user.role || 'Employee',
         department:
           profileData?.department ||
           user.department ||
@@ -152,28 +188,24 @@ export class ProfileController {
     };
   }
 
-  @Get('me')
+  // 🔹 Current logged-in user’s profile
   @UseGuards(JwtAuthGuard)
+  @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile (alias for /auth/me)' })
-  async getMyProfile(@Req() req: Request) {
-    // Defer to AuthController's logic: return profile information for the token user
-    const user = (req as any).user;
-    const userId = user?.userId || user?.id;
-    try {
-      // profileService.getProfile expects (userId, requestingUser)
-      const profile = await this.profileService.getProfile(userId, user as any);
-      return {
-        success: true,
-        data: profile,
-        message: 'Profile retrieved successfully',
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Unable to retrieve profile',
-        error: error.message,
-      };
-    }
+  async getMyProfile(@Req() req: AuthenticatedRequest) {
+    const user = req.user;
+    if (!user) throw new UnauthorizedException('Missing user in JWT payload');
+
+    const userId = user.userId || user.id;
+    const profile = await this.profileService.getProfile(userId, user);
+    if (!profile)
+      throw new NotFoundException(`Profile not found for user ID: ${userId}`);
+
+    return {
+      success: true,
+      data: profile,
+      message: 'Profile retrieved successfully',
+    };
   }
 }

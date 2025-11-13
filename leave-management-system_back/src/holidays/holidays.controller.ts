@@ -15,38 +15,38 @@ export class HolidaysController {
         id: '1',
         name: "New Year's Day",
         date: '2025-01-01',
-        type: 'national'
+        type: 'national',
       },
       {
         id: '2',
         name: 'Independence Day',
         date: '2025-07-04',
-        type: 'national'
+        type: 'national',
       },
       {
         id: '3',
         name: 'Christmas Day',
         date: '2025-12-25',
-        type: 'national'
+        type: 'national',
       },
       {
         id: '4',
         name: 'Labor Day',
         date: '2025-09-01',
-        type: 'national'
+        type: 'national',
       },
       {
         id: '5',
         name: 'Thanksgiving',
         date: '2025-11-27',
-        type: 'national'
-      }
+        type: 'national',
+      },
     ];
 
     return {
       success: true,
       data: mockHolidays,
-      message: 'Holidays retrieved successfully'
+      message: 'Holidays retrieved successfully',
     };
   }
 }

@@ -153,7 +153,6 @@ export class login implements OnInit, OnDestroy {
 
   private redirectToDashboard(): void {
     console.log('Redirecting to dashboard...');
-    // Use AuthService.hasRole to handle both array and string role formats
     if (this.authService.hasRole('ADMIN')) {
       this.router.navigate(['/admin/dashboard'], { state: { user: this.currentUser } });
     } else {

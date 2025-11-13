@@ -4,7 +4,8 @@ import { login } from './auth/components/login/login';
 import { RegisterComponent } from './public/register/register';
 
 import { LandingPage } from './public/components/landing-page/landing-page';
-import { Dashboard } from './private/components/users/dashboard/user-dashboard';
+import { UserDashboard } from './private/components/users/dashboard/user-dashboard';
+
 import { UserProfile } from './private/components/users/profile/user-profile';
 import { UserCalender } from './private/components/users/calender/user-calender';
 import { LeaveRequestComponent } from './private/components/users/leave-requests/user-leave-requests';
@@ -19,21 +20,15 @@ import { AuthGuard, RoleGuard } from './guards/auth.guard';
 const routes: Routes = [
   { path: 'login', component: login },
   { path: 'register', component: RegisterComponent },
-  // User Routes - Protected by AuthGuard
   { path: 'profile', component: UserProfile, canActivate: [AuthGuard] },
-  { path: 'dashboard', component: Dashboard, canActivate: [AuthGuard] },
+  { path: 'dashboard', component: UserDashboard, canActivate: [AuthGuard] },
   { path: 'calender', component: UserCalender, canActivate: [AuthGuard] },
   { path: 'leaverequests', component: LeaveRequestComponent, canActivate: [AuthGuard] },
-  // Analytics Route - Protected by AuthGuard
   { path: 'analytics', component: LeaveAnalytics, canActivate: [AuthGuard] },
-  // HR/Admin Only Routes - Protected by RoleGuard
   { path: 'approves', component: UserApproves, canActivate: [RoleGuard], data: { roles: ['ADMIN', 'HR_MANAGER'] } },
-  // Admin Routes
   { path: 'admin/dashboard', component: AdminDashboard, canActivate: [RoleGuard], data: { roles: ['ADMIN'] } },
-  // Settings and other pages
   { path: 'settings', redirectTo: '/profile', pathMatch: 'full' },
   { path: 'help', redirectTo: '/dashboard', pathMatch: 'full' },
-  // Default route
   { path: '', component: LandingPage },
 ];
 

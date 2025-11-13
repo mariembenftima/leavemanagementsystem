@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { LeaveBalanceEntity } from 'src/leave-balances/entities/leave-balance.entity';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 
 @Entity('leave_types')
 export class LeaveTypeEntity {
@@ -10,4 +11,6 @@ export class LeaveTypeEntity {
 
   @Column('int', { name: 'max_days' })
   maxDays: number;
+  @OneToMany(() => LeaveBalanceEntity, (lb) => lb.leaveType)
+  leaveBalances: LeaveBalanceEntity[];
 }

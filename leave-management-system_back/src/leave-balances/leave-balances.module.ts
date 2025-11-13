@@ -6,10 +6,11 @@ import { LeaveBalanceEntity } from './entities/leave-balance.entity';
 import { User } from '../users/entities/users.entity';
 import { LeaveTypeEntity } from '../leave-types/entities/leave-type.entity';
 import { LEAVE_BALANCES_PORT } from './types/tokens';
-import { LeaveBalancesPort } from './types/ports/leave-balances.port';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([LeaveBalanceEntity, User, LeaveTypeEntity])],
+  imports: [
+    TypeOrmModule.forFeature([LeaveBalanceEntity, User, LeaveTypeEntity]),
+  ],
   providers: [
     { provide: LEAVE_BALANCES_PORT, useClass: LeaveBalancesService },
     LeaveBalancesService,

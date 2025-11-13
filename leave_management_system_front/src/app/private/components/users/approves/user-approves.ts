@@ -79,7 +79,7 @@ export class UserApproves implements OnInit {
   }
 
   private loadLeaveRequests(): void {
-    this.apiService.getMyLeaveRequests().subscribe({
+    this.apiService.getLeaveRequests().subscribe({
       next: (response: any) => {
         if (response.success && response.data) {
           this.leaveRequests = response.data.map((request: any) => ({

@@ -52,7 +52,7 @@ export class ProfileDao {
 
   get contactInfo() {
     return {
-  // email: this.user?.email,
+      // email: this.user?.email,
       phone: this.phone,
       emergencyContact: this.emergencyContact,
       currentAddress: this.currentAddress,

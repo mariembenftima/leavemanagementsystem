@@ -5,7 +5,9 @@ import { EmailNotificationService } from './email-notification.service';
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)
 export class NotificationsController {
-  constructor(private readonly emailNotificationService: EmailNotificationService) {}
+  constructor(
+    private readonly emailNotificationService: EmailNotificationService,
+  ) {}
 
   @Post('test-email')
   async sendTestEmail(@Body() body: { email: string }, @Request() req) {

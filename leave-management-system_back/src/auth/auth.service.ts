@@ -1,4 +1,9 @@
-import { Injectable, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
@@ -17,9 +22,15 @@ export class AuthService {
   ) {}
 
   // used by LocalStrategy and login endpoint
-  async validateUserIdentifier(identifier: string, pass: string): Promise<AuthResponse> {
+  async validateUserIdentifier(
+    identifier: string,
+    pass: string,
+  ): Promise<AuthResponse> {
     // Try to find user by email first
-    console.log('🔍 validateUserIdentifier called with identifier:', identifier);
+    console.log(
+      '🔍 validateUserIdentifier called with identifier:',
+      identifier,
+    );
     let user = await this.usersService.findByEmail(identifier);
     console.log('🔎 findByEmail result:', !!user);
     if (!user) {
@@ -34,12 +45,18 @@ export class AuthService {
         return this.login(user);
       }
     }
-    console.log('❌ validateUserIdentifier - authentication failed for', identifier);
+    console.log(
+      '❌ validateUserIdentifier - authentication failed for',
+      identifier,
+    );
     throw new Error('Invalid username/email or password');
   }
 
   // Backwards-compatible wrapper for LocalStrategy and other callers
-  async validateUser(identifier: string, password: string): Promise<AuthResponse> {
+  async validateUser(
+    identifier: string,
+    password: string,
+  ): Promise<AuthResponse> {
     return this.validateUserIdentifier(identifier, password);
   }
 
@@ -59,12 +76,23 @@ export class AuthService {
           roles: user.roles || [],
         },
       },
-      message: 'Login successful'
+      message: 'Login successful',
     };
   }
 
   async registerUser(registerDto: RegisterUserDto): Promise<AuthResponse> {
-    const { email, password, username, fullname, phoneNumber, teamId, address, dateOfBirth, bio, profilePictureUrl } = registerDto;
+    const {
+      email,
+      password,
+      username,
+      fullname,
+      phoneNumber,
+      teamId,
+      address,
+      dateOfBirth,
+      bio,
+      profilePictureUrl,
+    } = registerDto;
 
     // Check if user already exists
     const existingUser = await this.usersService.findByEmail(email);
@@ -119,7 +147,7 @@ export class AuthService {
             roles: newUser.roles || [],
           },
         },
-        message: 'Registration successful'
+        message: 'Registration successful',
       };
     } catch (error) {
       throw new BadRequestException('Failed to create user: ' + error.message);
@@ -157,7 +185,7 @@ export class AuthService {
     try {
       console.log('🔍 Finding user by ID:', userId);
       const user = await this.usersService.getUserById(userId);
-      
+
       console.log('✅ User found:', user.email);
       return user;
     } catch (error) {

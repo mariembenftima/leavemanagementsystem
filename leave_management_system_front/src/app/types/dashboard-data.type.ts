@@ -1,14 +1,18 @@
-
-import { LeaveSummary } from './leave-summary.type';
-import { Activity } from './activity.model';
-import { Performance } from './performance.model';
-import { EmployeeProfileData } from '../private/types/user/profileType/employee-profile-data.type';
-import { Holiday } from './holiday.model';
-
+import { Activity } from "./activity.model";
+import { EmployeeProfile } from "./employee-profile.model";
+import { Holiday } from "./holiday.model";
+import { LeaveSummary } from "./leave-summary.type";
+import { Performance } from "./performance.model";
 export interface DashboardData {
-  employeeInfo: EmployeeProfileData;
-  leaveBalance: Record<string, LeaveSummary>; // keyed by leave type
-  activities: Activity[];
-  performance: Performance[];
-  holidays: { upcoming: number; total: number ;list: Holiday[];};
+  totalUsers: number;
+  totalLeaves: number;
+  totalDepartments: number;
+  totalPendingRequests: number;
+  recentActivities: Activity[];
+  employeeInfo: EmployeeProfile; 
+  activities: Activity[];        
+  performance: Performance[];     
+  holidays: { upcoming: number; total: number; list: Holiday[] };            
+  leaveBalance: Record<string, LeaveSummary>; 
 }
+

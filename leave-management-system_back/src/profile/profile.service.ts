@@ -12,15 +12,14 @@ import { PerformanceUpdateDto } from './types/dtos/performance-update.dto';
 import { User } from '../users/entities/users.entity';
 import { UserRole } from '../users/types/enums/user-role.enum';
 import { ActivityType } from './types/enums/activity-type.enum';
-// import { LeaveRepository } from '../leaves/repositories/leave.repository';
+//import { LeaveRepository } from '../leaves/repositories/leave.repository';
 
 @Injectable()
 export class ProfileService {
   constructor(
     private profileRepository: ProfileRepository,
-  public performanceRepository: PerformanceRepository,
-  public activityRepository: ActivityRepository,
-  // private leaveRepository: LeaveRepository,
+    public performanceRepository: PerformanceRepository,
+    public activityRepository: ActivityRepository,
   ) {}
 
   async createProfile(
@@ -61,7 +60,6 @@ export class ProfileService {
       throw new NotFoundException('Profile not found');
     }
 
-    // Check access permissions
     if (!this.canAccessProfile(userId, requestingUser)) {
       throw new ForbiddenException('Access denied');
     }
@@ -72,7 +70,6 @@ export class ProfileService {
   async getFullProfile(userId: string, requestingUser: User) {
     const profile = await this.getProfile(userId, requestingUser);
 
-    // Get additional data
     const [performance, recentActivities, leaveBalance] = await Promise.all([
       this.performanceRepository.getLatestPerformance(userId),
       this.activityRepository.getRecentActivities(userId, 5),
@@ -92,8 +89,10 @@ export class ProfileService {
     updateData: UpdateProfileDto,
     updatedBy: User,
   ) {
-    // Only HR, managers, or the user themselves can update profile
-    if (updatedBy.roles?.includes(UserRole.EMPLOYEE) && String(updatedBy.id) !== String(userId)) {
+    if (
+      updatedBy.roles?.includes(UserRole.EMPLOYEE) &&
+      String(updatedBy.id) !== String(userId)
+    ) {
       throw new ForbiddenException('You can only update your own profile');
     }
 
@@ -102,10 +101,9 @@ export class ProfileService {
       updateData,
     );
 
-    // Log activity
     await this.activityRepository.createActivity({
       userId,
-      type: ActivityType.TRAINING, // Generic update activity
+      type: ActivityType.TRAINING,
       title: 'Profile Updated',
       description: 'Employee profile information was updated',
     });
@@ -125,7 +123,6 @@ export class ProfileService {
       reviewDate: new Date(performanceDto.reviewDate),
     });
 
-    // Log activity
     await this.activityRepository.createActivity({
       userId,
       type: ActivityType.PERFORMANCE_REVIEW,
@@ -136,54 +133,45 @@ export class ProfileService {
     return performance;
   }
 
-  async getLeaveBalanceOverview(userId: string) {
-    const profile = await this.profileRepository.findByUserId(userId);
-    if (!profile) return null;
-
-    // annualLeaveBalance and sickLeaveBalance do not exist on User, so we comment these out
-    return {
-      annual: {
-        total: 0, // profile.user.annualLeaveBalance + this.getUsedLeaves(userId, 'annual'),
-        used: await this.getUsedLeaves(userId, 'annual'),
-        remaining: 0, // profile.user.annualLeaveBalance,
-      },
-      sick: {
-        total: 0, // profile.user.sickLeaveBalance + this.getUsedLeaves(userId, 'sick'),
-        used: await this.getUsedLeaves(userId, 'sick'),
-        remaining: 0, // profile.user.sickLeaveBalance,
-      },
-      personal: {
-        total: 15,
-        used: await this.getUsedLeaves(userId, 'emergency'),
-        remaining: 15 - (await this.getUsedLeaves(userId, 'emergency')),
-      },
-    };
-  }
-
   private async getUsedLeaves(
     userId: string,
     leaveType: string,
   ): Promise<number> {
-    // This would integrate with leave repository to calculate used leaves
     const currentYear = new Date().getFullYear();
-    // Implementation would fetch approved leaves for current year
-    return 0; // Placeholder
+    return 0;
   }
+  async getLeaveBalanceOverview(userId: string) {
+    const profile = await this.profileRepository.findByUserId(userId);
+    if (!profile) return null;
 
+    return {
+      annual: {
+        total: 0,
+        used: await this.getUsedLeaves(userId, 'annual'),
+        remaining: 0,
+      },
+      sick: {
+        total: 0,
+        used: await this.getUsedLeaves(userId, 'sick'),
+        remaining: 0,
+        personal: {
+          total: 15,
+          used: await this.getUsedLeaves(userId, 'emergency'),
+          remaining: 15 - (await this.getUsedLeaves(userId, 'emergency')),
+        },
+      },
+    };
+  }
   private canAccessProfile(
     profileUserId: string,
     requestingUser: User,
   ): boolean {
-    // HR can access all profiles
     if (requestingUser.roles?.includes(UserRole.HR)) return true;
 
-    // Users can access their own profile
     if (String(requestingUser.id) === String(profileUserId)) return true;
 
-    // Managers can access their team members' profiles
     if (requestingUser.roles?.includes(UserRole.MANAGER)) {
-      // This would need to check if the profile user reports to this manager
-      return true; // Simplified for now
+      return true;
     }
 
     return false;
@@ -191,7 +179,8 @@ export class ProfileService {
 
   async getDashboardData(userId: string) {
     const profile = await this.profileRepository.findByUserId(userId);
-    const performance: any = await this.performanceRepository.getLatestPerformance(userId);
+    const performance: any =
+      await this.performanceRepository.getLatestPerformance(userId);
     const recentActivities = await this.activityRepository.getRecentActivities(
       userId,
       4,
@@ -214,17 +203,17 @@ export class ProfileService {
         emergencyContact: profile.emergencyContactName,
         address: profile.address,
       },
-      performance: (performance && typeof performance.toOverview === 'function')
-        ? performance.toOverview()
-        : {
-            attendanceRate: 0,
-            performanceScore: 0,
-            activeProjects: 0,
-          },
+      performance:
+        performance && typeof performance.toOverview === 'function'
+          ? performance.toOverview()
+          : {
+              attendanceRate: 0,
+              performanceScore: 0,
+              activeProjects: 0,
+            },
       leaveBalance,
-      recentActivities: recentActivities?.map((activity) =>
-        activity.toSummary(),
-      ) || [],
+      recentActivities:
+        recentActivities?.map((activity) => activity.toSummary()) || [],
     };
   }
 }

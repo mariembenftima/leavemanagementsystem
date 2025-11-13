@@ -1,8 +1,8 @@
 export interface Activity {
-  id: string;
-  profileId: string;
-  activityType: string;
+  id: number;
+  userId: string;
+  activityType: string;          // LOGIN, LEAVE_REQUEST, etc.
   description: string;
-  activityDate: string;
+  details?: Record<string, any>; // JSONB field
   createdAt: string;
 }

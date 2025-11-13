@@ -1,10 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
-import { LEAVE_TYPES } from '../../../types/user/leaveRequestsType/leave-types';
 import { ApiService, LeaveRequest } from '../../../services/api.service';
 import { AuthService } from '../../../services/auth.service';
 import { Holiday } from '../../../../types/holiday.model';
+import { LEAVE_TYPES } from '../../../../types/leave-types';
 
 interface CalendarEvent {
   id: string;
@@ -88,7 +88,7 @@ private async loadCalendarData(): Promise<void> {
     const [events, holidays, leaves] = await Promise.all([
       lastValueFrom(this.apiService.getCalendarEvents(this.currentMonth + 1, this.currentYear)),
       lastValueFrom(this.apiService.getHolidays(this.currentYear)),
-      lastValueFrom(this.apiService.getMyLeaveRequests())
+      lastValueFrom(this.apiService.getLeaveRequests())
     ]);
 
     this.events = this.processCalendarEvents(events);

@@ -9,23 +9,23 @@ import {
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../../services/auth.service';
-import { EmployeeProfileData } from '../../../types/user/profileType/employee-profile-data.type';
 import { LeaveBalance } from '../../../../types/leave-balance.model';
 import { DataMapperService } from '../../../../helpers/data-mapper.service';
 import { ApiService } from '../../../services/api.service';
+import { EmployeeProfile } from '../../../../types/employee-profile.model';
 
 
 @Component({
   selector: 'app-employee-profile',
   templateUrl: './user-profile.html',
-  
+
   styleUrls: ['./user-profile.css'],
   standalone: false,
-  
+
 })
 export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
-[x: string]: any;
-  employeeData!: EmployeeProfileData;
+  [x: string]: any;
+  employeeData!: EmployeeProfile;
   leaveBalances: Record<string, LeaveBalance> = {};
   isLoading = true;
   hasError = false;
@@ -35,13 +35,20 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
   private clockInterval?: number;
 
   constructor(
-    private http: HttpClient, 
-    private mapper: DataMapperService, 
+    private http: HttpClient,
+    private mapper: DataMapperService,
     private authService: AuthService,
     private apiService: ApiService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      console.warn('⚠️ No token found, redirecting to login...');
+      window.location.href = '/login'; 
+      return;
+    }
+
     this.loadEmployeeProfile();
     this.loadLeaveBalances();
 
@@ -87,32 +94,33 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  private getEmptyProfileData(): EmployeeProfileData {
+  private getEmptyProfileData(): EmployeeProfile {
     return {
-      id: '',
-      user_id: this.getCurrentUserId(),
-      employee_id: '',
-      fullname: '',
-      email: 'dfsc',
-      phone: '',
-      department: '',
-      designation: '',
-      join_date: new Date().toISOString().split('T')[0],
-      gender: '',
-      date_of_birth: '',
-      address: '',
-      emergency_contact_name: '',
-      emergency_contact_phone: '',
-      marital_status: '',
-      nationality: '',
-      salary: 0,
-      bank_account_number: '',
-      bank_name: '',
-      roles: 'employee',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      isActive: true
-    };
+  userId: this.getCurrentUserId(),
+  fullname: '',
+  email: 'dfsc',
+  phone: '',
+  department: '',
+  position: '',
+  hireDate: new Date().toISOString().split('T')[0],
+  gender: '',
+  dateOfBirth: '',
+  address: '',
+  emergencyContactName: '',
+  emergencyContactPhone: '',
+  maritalStatus: '',
+  nationality: '',
+  salary: 0,
+  bankAccountNumber: '',
+  roles: ['employee'],
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  isActive: true,
+  id: 0,
+  employeeId: '',
+  firstName: '',
+  lastName: '',
+};
   }
 
   private loadLeaveBalances(): void {
@@ -228,14 +236,14 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     const leave = this.leaveBalances[typeKey];
     if (!leave) return;
 
-    const total = leave.carryover + leave.used;
-    const remaining = total - leave.used;
-    const percentage = ((leave.used / total) * 100).toFixed(1);
+    const total = leave.carryOverDays + leave.usedDays;
+    const remaining = total - leave.usedDays;
+    const percentage = ((leave.usedDays / total) * 100).toFixed(1);
 
     const content = `
       <div class="info-grid">
         <div class="info-item"><div class="info-label">Type</div><div class="info-value">${typeKey}</div></div>
-        <div class="info-item"><div class="info-label">Used</div><div class="info-value">${leave.used} days</div></div>
+        <div class="info-item"><div class="info-label">Used</div><div class="info-value">${leave.usedDays} days</div></div>
         <div class="info-item"><div class="info-label">Remaining</div><div class="info-value">${remaining} days</div></div>
         <div class="info-item" style="grid-column: 1 / -1;">
           <div class="info-label">Usage</div>
@@ -327,8 +335,8 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  updateClock(): void {}
-  initializeCharts(): void {}
+  updateClock(): void { }
+  initializeCharts(): void { }
 
   private capFirst(s: string): string {
     return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;

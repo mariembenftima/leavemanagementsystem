@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ToastService } from '../../../../shared/services/toast.service';
+import { ApiService } from '../../../services/api.service';
+import { EmployeeProfile } from '../../../../types/employee-profile.model';
 
 interface LeaveType {
   value: string;
@@ -33,21 +35,10 @@ export class LeaveRequestComponent implements OnInit {
   leaveRequestForm: FormGroup;
   isSubmitting = false;
   attachedFiles: File[] = [];
-  allowedFileTypes = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'];
+  currentEmployee: EmployeeProfile | null = null;
+  isLoadingUser = false;
+  allowedFileTypes: string[] = ['.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg'];
 
-  user: User = {
-    fullname: 'John Doe',
-    username: 'john.doe',
-    email: 'john.doe@company.com',
-    position: 'Software Engineer',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'
-  };
-
-  currentEmployee = {
-    name: 'John Doe',
-    id: 'EMP001',
-    department: 'Engineering'
-  };
 
   minDate = new Date().toISOString().split('T')[0];
 
@@ -67,14 +58,40 @@ export class LeaveRequestComponent implements OnInit {
 
   constructor(
     private formBuilder: FormBuilder,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private apiService: ApiService
   ) {
     this.leaveRequestForm = this.createForm();
   }
 
   ngOnInit(): void {
+    this.loadCurrentEmployee();
     this.setupFormValidation();
   }
+
+  private async loadCurrentEmployee(): Promise<void> {
+    this.isLoadingUser = true;
+
+    try {
+      const storedUser = localStorage.getItem('currentUser');
+
+      if (storedUser) {
+        this.currentEmployee = JSON.parse(storedUser);
+      } else {
+        const userId = JSON.parse(localStorage.getItem('currentUser') || '{}')?.id;
+        this.currentEmployee = (await this.apiService.getProfile(userId).toPromise()) ?? null;
+      }
+
+      console.log('✅ Loaded employee data:', this.currentEmployee);
+    } catch (err) {
+      console.error('❌ Failed to load user data:', err);
+      this.currentEmployee = null;
+    } finally {
+      this.isLoadingUser = false;
+    }
+  }
+
+
 
   private createForm(): FormGroup {
     return this.formBuilder.group({
@@ -112,23 +129,23 @@ export class LeaveRequestComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     if (input.files) {
       const files = Array.from(input.files);
-      
+
       // Validate file types and sizes
       const validFiles = files.filter(file => {
         const extension = '.' + file.name.split('.').pop()?.toLowerCase();
         const isValidType = this.allowedFileTypes.includes(extension);
         const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB limit
-        
+
         if (!isValidType) {
           console.warn(`File ${file.name} has invalid type`);
           return false;
         }
-        
+
         if (!isValidSize) {
           console.warn(`File ${file.name} exceeds size limit`);
           return false;
         }
-        
+
         return true;
       });
 
@@ -174,14 +191,14 @@ export class LeaveRequestComponent implements OnInit {
 
   getFieldError(fieldName: string): string {
     const field = this.leaveRequestForm.get(fieldName);
-    
+
     if (field?.errors) {
       if (field.errors['required']) return `${fieldName} is required`;
       if (field.errors['email']) return 'Please enter a valid email';
       if (field.errors['maxlength']) return `Maximum ${field.errors['maxlength'].requiredLength} characters allowed`;
       if (field.errors['dateRange']) return 'End date must be after start date';
     }
-    
+
     return '';
   }
 
@@ -190,26 +207,26 @@ export class LeaveRequestComponent implements OnInit {
       this.isSubmitting = true;
 
       try {
-        const formData = new FormData();
-        
-        // Append form fields
-        Object.keys(this.leaveRequestForm.value).forEach(key => {
-          formData.append(key, this.leaveRequestForm.value[key]);
-        });
+        const payload = {
+          leaveType: this.leaveRequestForm.value.type,          // ✅ backend expects "leaveType"
+          startDate: this.leaveRequestForm.value.startDate,      // ✅ must be ISO date string
+          endDate: this.leaveRequestForm.value.endDate,
+          reason: this.leaveRequestForm.value.reason,
+          emergencyContact: this.leaveRequestForm.value.emergencyContact,
+          managerEmail: this.leaveRequestForm.value.managerEmail,
+          isHalfDay: !!this.leaveRequestForm.value.halfDay,      // ✅ ensure boolean not string
+        };
 
-        // Append files
-        this.attachedFiles.forEach(file => {
-          formData.append('attachments', file);
-        });
+        console.log('📤 Sending payload to API:', payload);
 
-        // Simulate API call
-        await this.submitLeaveRequest(formData);
-        
-        this.showNotification('Leave request submitted successfully!', 'success');
+        const response = await this.apiService.createLeaveRequest(payload).toPromise();
+        console.log('✅ Leave request saved:', response);
+
+        this.toastService.success('Leave Request Submitted', 'Your request was successfully sent!');
         this.resetForm();
       } catch (error) {
-        this.showNotification('Failed to submit leave request. Please try again.', 'error');
-        console.error('Submission error:', error);
+        console.error('❌ Submission error:', error);
+        this.toastService.error('Submission Failed', 'Unable to send leave request.');
       } finally {
         this.isSubmitting = false;
       }
@@ -218,15 +235,6 @@ export class LeaveRequestComponent implements OnInit {
     }
   }
 
-  private async submitLeaveRequest(formData: FormData): Promise<void> {
-    // Replace with your actual API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log('Leave request submitted:', Object.fromEntries(formData));
-        resolve();
-      }, 2000);
-    });
-  }
 
   private markFormGroupTouched(): void {
     Object.keys(this.leaveRequestForm.controls).forEach(key => {
@@ -256,18 +264,18 @@ export class LeaveRequestComponent implements OnInit {
   formatDateRange(startDate: string, endDate: string): string {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
-    const startFormatted = start.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
+
+    const startFormatted = start.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric'
     });
-    
-    const endFormatted = end.toLocaleDateString('en-US', { 
-      month: 'short', 
+
+    const endFormatted = end.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
       year: 'numeric'
     });
-    
+
     return `${startFormatted} — ${endFormatted}`;
   }
 
@@ -309,7 +317,7 @@ export class LeaveRequestComponent implements OnInit {
     event.stopPropagation();
     const target = event.currentTarget as HTMLElement;
     target.classList.remove('dragover');
-    
+
     const files = event.dataTransfer?.files;
     if (files && files.length > 0) {
       this.handleFiles(files);
@@ -318,23 +326,23 @@ export class LeaveRequestComponent implements OnInit {
 
   private handleFiles(files: FileList): void {
     const fileArray = Array.from(files);
-    
+
     // Validate file types and sizes
     const validFiles = fileArray.filter(file => {
       const extension = '.' + file.name.split('.').pop()?.toLowerCase();
       const isValidType = this.allowedFileTypes.includes(extension);
       const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB limit
-      
+
       if (!isValidType) {
         console.warn(`File ${file.name} has invalid type`);
         return false;
       }
-      
+
       if (!isValidSize) {
         console.warn(`File ${file.name} exceeds size limit`);
         return false;
       }
-      
+
       return true;
     });
 

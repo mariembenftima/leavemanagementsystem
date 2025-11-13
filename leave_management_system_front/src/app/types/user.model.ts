@@ -1,20 +1,20 @@
+import { Team } from "./team.model";
+
 export interface User {
-  id: string;
+  id: string;                    // UUID
   username: string;
   fullname: string;
   email: string;
-  phoneNumber: string;
-  password?: string;
+  phoneNumber?: string;
+  password?: string;             // optional for frontend
   isActive: boolean;
   lastLogin?: string;
-  // Roles may come from the API as a comma-separated string or as an array.
-  // Accept both to remain backwards compatible while we normalize at runtime.
-  roles: string | string[];
+  roles: string[];               // ['EMPLOYEE', 'HR', 'ADMIN']
   profilePictureUrl?: string;
   bio?: string;
   address?: string;
   dateOfBirth?: string;
-  teamId?: string;
+  team?: Team | null;
   createdAt: string;
   updatedAt: string;
 }
