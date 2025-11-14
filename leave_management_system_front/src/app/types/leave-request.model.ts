@@ -18,8 +18,7 @@ export interface LeaveRequest {
   rejectedReason?: string;
   createdAt: string;
   updatedAt: string;
-
-  // Optional relations
+  attachment?: File | string;
   user?: User;
   leaveType?: LeaveType;
 }
