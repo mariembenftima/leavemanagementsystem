@@ -15,7 +15,7 @@ import {
 } from '@nestjs/swagger';
 import { LeaveRequestsService } from './leave-requests.service';
 import { LeaveRequestStatus } from './entities/leave-request.entity';
-import { AuthenticatedRequest } from 'src/auth/types/authenticated-request';
+import { AuthenticatedRequest } from '../auth/types/authenticated-request'; // ✅ Import correct
 import { CreateLeaveRequestDto } from './types/dtos/create-leave-request.dto';
 
 @ApiTags('leave-requests')
@@ -63,7 +63,7 @@ export class LeaveRequestsController {
     };
   }
 
-  @ApiOperation({ summary: 'Get current user’s leave requests' })
+  @ApiOperation({ summary: "Get current user's leave requests" })
   @ApiResponse({
     status: 200,
     description: 'Leave requests retrieved successfully',
@@ -83,8 +83,11 @@ export class LeaveRequestsController {
     status: 201,
     description: 'Leave request created successfully',
   })
-  async createLeaveRequest(@Body() dto: CreateLeaveRequestDto, @Request() req) {
-    const userId = (req.user as { id: string })?.id;
+  async createLeaveRequest(
+    @Body() dto: CreateLeaveRequestDto,
+    @Request() req: AuthenticatedRequest, // ✅ Typé correctement
+  ) {
+    const userId = req.user.userId; // ✅ Plus d'erreur "unsafe any"
 
     const createdRequest = await this.leaveRequestsService.createLeaveRequest(
       dto,
@@ -99,10 +102,15 @@ export class LeaveRequestsController {
   }
 
   @Put(':id/status')
+  @ApiOperation({ summary: 'Update leave request status (HR/Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Leave request status updated successfully',
+  })
   async updateLeaveRequestStatus(
     @Param('id') id: string,
     @Body() updateStatusDto: { status: LeaveRequestStatus },
-    @Request() req: AuthenticatedRequest,
+    @Request() req: AuthenticatedRequest, // ✅ Typé correctement
   ) {
     const updated = await this.leaveRequestsService.updateLeaveRequestStatus(
       id,

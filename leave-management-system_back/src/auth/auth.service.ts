@@ -11,7 +11,7 @@ import { LeaveTypesService } from '../leave-types/leave-types.service';
 import * as bcrypt from 'bcrypt';
 import { AuthResponse } from './types/interfaces/auth-response.interface';
 import { RegisterUserDto } from './types/register-user.dto';
-
+import { User } from '../users/entities/users.entity';
 @Injectable()
 export class AuthService {
   constructor(
@@ -21,30 +21,32 @@ export class AuthService {
     private readonly leaveTypesService: LeaveTypesService,
   ) {}
 
-  // used by LocalStrategy and login endpoint
   async validateUserIdentifier(
     identifier: string,
     pass: string,
   ): Promise<AuthResponse> {
-    // Try to find user by email first
     console.log(
       '🔍 validateUserIdentifier called with identifier:',
       identifier,
     );
+
     let user = await this.usersService.findByEmail(identifier);
     console.log('🔎 findByEmail result:', !!user);
+
     if (!user) {
-      // If not found by email, try username
       user = await this.usersService.findByUsername(identifier);
       console.log('🔎 findByUsername result:', !!user);
     }
+
     if (user) {
       const match = await bcrypt.compare(pass, user.password);
       console.log('🔐 password compare result for', identifier, ':', match);
+
       if (match) {
         return this.login(user);
       }
     }
+
     console.log(
       '❌ validateUserIdentifier - authentication failed for',
       identifier,
@@ -52,7 +54,6 @@ export class AuthService {
     throw new Error('Invalid username/email or password');
   }
 
-  // Backwards-compatible wrapper for LocalStrategy and other callers
   async validateUser(
     identifier: string,
     password: string,
@@ -60,8 +61,13 @@ export class AuthService {
     return this.validateUserIdentifier(identifier, password);
   }
 
-  async login(user: any): Promise<AuthResponse> {
-    const payload = { sub: user.id, email: user.email, roles: user.roles };
+  // ✅ Méthode login avec typage correct (synchrone)
+  login(user: User): AuthResponse {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      roles: user.roles,
+    };
     const access_token = this.jwtService.sign(payload);
 
     return {
@@ -108,7 +114,7 @@ export class AuthService {
       email,
       phoneNumber,
       password: hashedPassword,
-      roles: ['EMPLOYEE'], // Default role
+      roles: ['EMPLOYEE'],
       teamId,
       address: address || undefined,
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
@@ -119,7 +125,6 @@ export class AuthService {
 
     try {
       const newUser = await this.usersService.createUser(userData);
-
       await this.createInitialLeaveBalances(newUser.id);
 
       const payload = {
@@ -150,9 +155,8 @@ export class AuthService {
     }
   }
 
-  private async createInitialLeaveBalances(userId: string) {
+  private async createInitialLeaveBalances(userId: string): Promise<void> {
     try {
-      // Get all leave types
       const leaveTypes = await this.leaveTypesService.findAll();
       const currentYear = new Date().getFullYear();
 
@@ -177,11 +181,10 @@ export class AuthService {
     }
   }
 
-  async findUserById(userId: string) {
+  async findUserById(userId: string): Promise<User> {
     try {
       console.log('🔍 Finding user by ID:', userId);
       const user = await this.usersService.getUserById(userId);
-
       console.log('✅ User found:', user.email);
       return user;
     } catch (error: unknown) {
