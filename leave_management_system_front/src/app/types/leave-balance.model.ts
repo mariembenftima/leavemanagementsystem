@@ -3,10 +3,10 @@ export interface LeaveBalance {
   userId: string;
   leaveTypeId: number;
   year: number;
-  totalDays: number;
-  usedDays: number;  
-  remainingDays: number;
-  carryOverDays: number;  
+  total: number;
+  used: number;
+  carryover: number;
+  remaining: number;  
   createdAt: string;
   updatedAt: string;
 }

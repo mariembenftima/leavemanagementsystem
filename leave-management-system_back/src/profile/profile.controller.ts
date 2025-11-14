@@ -18,7 +18,6 @@ import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 import { ProfileService } from './profile.service';
 import { Request } from 'express';
 
-// 🔹 Custom request type that includes `user`
 interface AuthenticatedRequest extends Request {
   user: any;
 }
@@ -31,7 +30,6 @@ export class ProfileController {
     private readonly profileService: ProfileService, // ✅ readonly ensures DI type safety
   ) {}
 
-  // 🔹 Fetch profile by userId (admin or HR use)
   @UseGuards(JwtAuthGuard)
   @Get(':userId')
   @ApiBearerAuth()
@@ -54,7 +52,6 @@ export class ProfileController {
     };
   }
 
-  // 🔹 Dashboard data for current user
   @UseGuards(JwtAuthGuard)
   @Get('dashboard')
   @ApiBearerAuth()
@@ -69,7 +66,6 @@ export class ProfileController {
 
     console.log('🔍 Dashboard request for user:', user);
 
-    // Fetch related data
     let profileData: any = null;
     let leaveBalance: any = null;
     let recentActivities: any[] = [];
@@ -188,7 +184,6 @@ export class ProfileController {
     };
   }
 
-  // 🔹 Current logged-in user’s profile
   @UseGuards(JwtAuthGuard)
   @Get('me')
   @ApiBearerAuth()
@@ -201,11 +196,14 @@ export class ProfileController {
     const profile = await this.profileService.getProfile(userId, user);
     if (!profile)
       throw new NotFoundException(`Profile not found for user ID: ${userId}`);
-
+  }
+  catch(error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
     return {
-      success: true,
-      data: profile,
-      message: 'Profile retrieved successfully',
+      success: false,
+      message: 'Unable to retrieve profile',
+      error: errorMessage,
     };
   }
 }

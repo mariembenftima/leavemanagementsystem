@@ -39,8 +39,10 @@ export class LeaveRequestsController {
         data: leaveRequests,
         message: 'All leave requests retrieved successfully',
       };
-    } catch (err) {
-      console.error('❌ /leave-requests/all failed:', err.message, err.stack);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorStack = err instanceof Error ? err.stack : undefined;
+      console.error('❌ /leave-requests/all failed:', errorMessage, errorStack);
       throw err;
     }
   }

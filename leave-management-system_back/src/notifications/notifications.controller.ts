@@ -17,11 +17,13 @@ export class NotificationsController {
         success: true,
         message: 'Test email sent successfully',
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
         message: 'Failed to send test email',
-        error: error.message,
+        error: errorMessage,
       };
     }
   }

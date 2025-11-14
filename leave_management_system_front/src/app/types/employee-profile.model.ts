@@ -10,7 +10,7 @@ export interface EmployeeProfile {
   position?: string;
   department?: string;
   managerId?: string;
-  hireDate?: string;
+  hireDate: string;
   salary?: number;
   dateOfBirth?: string;
   bankAccountNumber?: string;
@@ -20,7 +20,7 @@ export interface EmployeeProfile {
   gender?: string;
   nationality?: string; 
   maritalStatus?: string;  
-  phone?: string;  
+  phone: string;  
   email: string;  
   roles: string[];
   address?: string; 

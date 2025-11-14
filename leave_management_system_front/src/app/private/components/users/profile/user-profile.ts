@@ -236,14 +236,14 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     const leave = this.leaveBalances[typeKey];
     if (!leave) return;
 
-    const total = leave.carryOverDays + leave.usedDays;
-    const remaining = total - leave.usedDays;
-    const percentage = ((leave.usedDays / total) * 100).toFixed(1);
+    const total = leave.carryover + leave.used;
+    const remaining = total - leave.used;
+    const percentage = ((leave.used / total) * 100).toFixed(1);
 
     const content = `
       <div class="info-grid">
         <div class="info-item"><div class="info-label">Type</div><div class="info-value">${typeKey}</div></div>
-        <div class="info-item"><div class="info-label">Used</div><div class="info-value">${leave.usedDays} days</div></div>
+        <div class="info-item"><div class="info-label">Used</div><div class="info-value">${leave.used} days</div></div>
         <div class="info-item"><div class="info-label">Remaining</div><div class="info-value">${remaining} days</div></div>
         <div class="info-item" style="grid-column: 1 / -1;">
           <div class="info-label">Usage</div>

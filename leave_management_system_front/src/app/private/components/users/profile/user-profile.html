@@ -67,20 +67,20 @@
                     <span class="leave-type text-capitalize">{{ key.key }} Leave</span>
                     <div class="leave-numbers">
                       <span class="leave-badge badge-used">
-                        Used: {{ key.value.usedDays }}
+                        Used: {{ key.value.used }}
                       </span>
                       <span class="leave-badge badge-remaining">
                         Remaining:
                         {{
-                        (key.value.carryOverDays + key.value.usedDays) - key.value.usedDays
+                        (key.value.carryover + key.value.used) - key.value.used
                         }}
                       </span>
                     </div>
                   </div>
                   <div class="progress-bar">
                     <div class="progress-fill" [style.width]="
-                        (key.value.usedDays /
-                          (key.value.carryOverDays + key.value.usedDays || 1)) * 100 + '%'
+                        (key.value.used /
+                          (key.value.carryover + key.value.used || 1)) * 100 + '%'
                       "></div>
                   </div>
                 </div>

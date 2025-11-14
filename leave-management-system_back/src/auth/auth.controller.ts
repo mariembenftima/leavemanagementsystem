@@ -26,13 +26,13 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { Express } from 'express';
 import { AuthenticatedRequest } from './types/authenticated-request';
+import { LoginDto } from './types/dtos/login.dto';
 
 @ApiTags('authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // DEV helper: issue a token for a user by ID (only in non-production environments)
   @Get('dev-token')
   async devToken(@Query('userId') userId: string) {
     if (process.env.NODE_ENV === 'production') {
@@ -47,8 +47,9 @@ export class AuthController {
       const result = await this.authService.login(user);
       // Mirror login response structure
       return result;
-    } catch (error) {
-      return { success: false, message: error.message };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return { success: false, message };
     }
   }
 
@@ -56,14 +57,12 @@ export class AuthController {
   @ApiOperation({ summary: 'User login' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  // Accept either { email, password } (frontend) or { identifier, password }
-  async login(
-    @Body() loginDto: { email?: string; identifier?: string; password: string },
-  ) {
-    const identifier = loginDto.identifier || loginDto.email;
-    console.log('🔍 Login attempt received for identifier/email:', identifier);
+  async login(@Body() loginDto: LoginDto) {
+    const identifier = loginDto.email;
+    console.log('🔍 Login attempt received for email:', identifier);
+
     if (!identifier || !loginDto.password) {
-      console.log('❌ Login failed - missing identifier or password');
+      console.log('❌ Login failed - missing email or password');
       throw new UnauthorizedException('Missing credentials');
     }
 
@@ -73,15 +72,16 @@ export class AuthController {
         loginDto.password,
       );
       console.log('✅ Login successful for:', identifier);
-      // Return existing structure but also include top-level access_token and user for older frontends
       return {
         ...result,
         access_token: result.data?.access_token,
         user: result.data?.user,
       };
-    } catch (error) {
-      console.log('❌ Login failed for:', identifier, error.message);
-      throw new UnauthorizedException('Invalid username/email or password');
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      console.log('❌ Login failed for:', identifier, errorMessage);
+      throw new UnauthorizedException('Invalid email or password');
     }
   }
 
@@ -109,7 +109,7 @@ export class AuthController {
         callback(null, true);
       },
       limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB limit
+        fileSize: 5 * 1024 * 1024,
       },
     }),
   )
@@ -124,7 +124,6 @@ export class AuthController {
     );
 
     try {
-      // Add profile picture path to registration data
       const registrationData = {
         ...registerDto,
         profilePictureUrl: profilePicture
@@ -140,11 +139,13 @@ export class AuthController {
         data: result.data,
         message: 'Registration successful',
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Registration failed';
       console.log(
         '❌ Registration failed for:',
         registerDto.email,
-        error.message,
+        errorMessage,
       );
       throw error;
     }
@@ -163,5 +164,11 @@ export class AuthController {
     const userId = req.user.userId;
     const user = await this.authService.findUserById(userId);
     return { success: true, user };
+  }
+  catch(error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to retrieve user';
+    console.log('❌ Failed to get current user:', errorMessage);
+    throw new UnauthorizedException('Unable to retrieve user profile');
   }
 }

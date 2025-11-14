@@ -94,17 +94,14 @@ export class AuthService {
       profilePictureUrl,
     } = registerDto;
 
-    // Check if user already exists
     const existingUser = await this.usersService.findByEmail(email);
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
 
-    // Hash password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Create user data
     const userData = {
       username,
       fullname,
@@ -121,13 +118,10 @@ export class AuthService {
     };
 
     try {
-      // Create user
       const newUser = await this.usersService.createUser(userData);
 
-      // Create initial leave balances for all leave types
       await this.createInitialLeaveBalances(newUser.id);
 
-      // Generate JWT token for immediate login
       const payload = {
         sub: newUser.id,
         email: newUser.email,
@@ -149,8 +143,10 @@ export class AuthService {
         },
         message: 'Registration successful',
       };
-    } catch (error) {
-      throw new BadRequestException('Failed to create user: ' + error.message);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new BadRequestException('Failed to create user: ' + errorMessage);
     }
   }
 
@@ -160,7 +156,6 @@ export class AuthService {
       const leaveTypes = await this.leaveTypesService.findAll();
       const currentYear = new Date().getFullYear();
 
-      // Create leave balance for each leave type
       for (const leaveType of leaveTypes) {
         await this.leaveBalancesService.create({
           userId,
@@ -172,12 +167,13 @@ export class AuthService {
       }
 
       console.log(`✅ Created initial leave balances for user ${userId}`);
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       console.error(
         `❌ Failed to create leave balances for user ${userId}:`,
-        error.message,
+        errorMessage,
       );
-      // Don't throw error here to avoid failing registration
     }
   }
 
@@ -188,8 +184,10 @@ export class AuthService {
 
       console.log('✅ User found:', user.email);
       return user;
-    } catch (error) {
-      console.log('❌ Error finding user by ID:', error.message);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      console.log('❌ Error finding user by ID:', errorMessage);
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
   }
