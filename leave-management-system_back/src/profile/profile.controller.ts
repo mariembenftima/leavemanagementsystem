@@ -21,15 +21,39 @@ import { EmployeeProfile } from './entities/employee-profile.entity';
 import { Performance } from './entities/performance.entity';
 import { User } from '../users/entities/users.entity';
 
-interface ActivitySummary {
+interface ActivityWithSummary {
+  toSummary?: () => ActivitySummary;
   id?: number;
   type?: string;
-  title: string;
-  description: string;
+  title?: string;
+  description?: string;
   timeAgo?: string;
   displayDate?: string;
-  date?: string;
   createdAt?: Date;
+}
+
+interface ActivitySummary {
+  id: number;
+  type: string;
+  title: string;
+  description?: string;
+  timeAgo: string;
+  displayDate: string;
+  createdAt: Date;
+}
+
+// ✅ Interface pour Leave Balance
+interface LeaveBalanceType {
+  total: number;
+  used: number;
+  remaining: number;
+}
+
+interface LeaveBalanceSummary {
+  annual?: LeaveBalanceType;
+  sick?: LeaveBalanceType;
+  personal?: LeaveBalanceType;
+  [key: string]: LeaveBalanceType | undefined;
 }
 
 interface PartialProfile {
@@ -37,7 +61,6 @@ interface PartialProfile {
   designation?: string;
   joinDate?: Date | string;
   employeeId?: string;
-  workExperience?: number | string;
   gender?: string;
   phone?: string;
   emergencyContactName?: string;
@@ -115,7 +138,7 @@ export class ProfileController {
     console.log('🔍 Dashboard request for user:', user);
 
     let profileData: EmployeeProfile | PartialProfile | null = null;
-    let leaveBalance: any = null;
+    let leaveBalance: LeaveBalanceSummary = {}; // ✅ Type correct
     let recentActivities: ActivitySummary[] = [];
     let performance: Performance | null = null;
 
@@ -125,7 +148,11 @@ export class ProfileController {
         this.toUserEntity(user) as User,
       );
 
-      leaveBalance = await this.leaveBalancesService.findByUserId(user.userId);
+      // ✅ Cast vers LeaveBalanceSummary
+      const rawLeaveBalance = await this.leaveBalancesService.findByUserId(
+        user.userId,
+      );
+      leaveBalance = rawLeaveBalance as LeaveBalanceSummary;
 
       if (
         'activityRepository' in this.profileService &&
@@ -138,11 +165,24 @@ export class ProfileController {
           );
 
         if (Array.isArray(rawActivities)) {
-          recentActivities = rawActivities.map(
-            (activity: any): ActivitySummary =>
-              typeof activity.toSummary === 'function'
-                ? activity.toSummary()
-                : activity,
+          recentActivities = (rawActivities as ActivityWithSummary[]).map(
+            (activity): ActivitySummary => {
+              if (
+                activity.toSummary &&
+                typeof activity.toSummary === 'function'
+              ) {
+                return activity.toSummary();
+              }
+              return {
+                id: activity.id || 0,
+                type: activity.type || '',
+                title: activity.title || 'Activity',
+                description: activity.description,
+                timeAgo: activity.timeAgo || '',
+                displayDate: activity.displayDate || '',
+                createdAt: activity.createdAt || new Date(),
+              };
+            },
           );
         }
       }
@@ -155,7 +195,7 @@ export class ProfileController {
           await this.profileService.performanceRepository.getLatestPerformance(
             user.userId,
           );
-        performance = rawPerformance as Performance;
+        performance = rawPerformance ? (rawPerformance as Performance) : null;
       }
     } catch (error: unknown) {
       const errorMessage =
@@ -165,6 +205,7 @@ export class ProfileController {
         errorMessage,
       );
 
+      // ✅ Fallback typé
       leaveBalance = {
         annual: { total: 25, used: 5, remaining: 20 },
         sick: { total: 12, used: 2, remaining: 10 },
@@ -187,15 +228,18 @@ export class ProfileController {
     };
 
     const getWorkExperience = (): string => {
-      if (!profileData?.workExperience) {
+      if (!profileData) {
         return '2 years';
       }
 
-      if (typeof profileData.workExperience === 'number') {
-        return `${profileData.workExperience} years`;
+      if (
+        'yearsOfService' in profileData &&
+        typeof profileData.yearsOfService === 'number'
+      ) {
+        return `${profileData.yearsOfService} years`;
       }
 
-      return profileData.workExperience;
+      return '2 years';
     };
 
     const dashboardData = {
@@ -239,14 +283,9 @@ export class ProfileController {
       leaveBalance,
       recentActivities: recentActivities.length
         ? recentActivities.map((activity) => ({
-            title: activity.title || 'Activity',
+            title: activity.title,
             description: activity.description || '',
-            date:
-              activity.date ||
-              activity.displayDate ||
-              (activity.createdAt
-                ? activity.createdAt.toISOString()
-                : new Date().toISOString()),
+            date: activity.displayDate || activity.createdAt.toISOString(),
           }))
         : [
             {
