@@ -12,7 +12,7 @@ import { PerformanceUpdateDto } from './types/dtos/performance-update.dto';
 import { User } from '../users/entities/users.entity';
 import { UserRole } from '../users/types/enums/user-role.enum';
 import { ActivityType } from './types/enums/activity-type.enum';
-//import { LeaveRepository } from '../leaves/repositories/leave.repository';
+import { ActivityDao } from './types/daos/activity.dao';
 
 @Injectable()
 export class ProfileService {
@@ -43,12 +43,12 @@ export class ProfileService {
       createProfileDto,
     );
 
-    // Create initial activity
+    const profileId = profile.id;
+
     await this.activityRepository.createActivity({
-      userId,
-      type: ActivityType.PROMOTION,
-      title: `Joined as ${createProfileDto.designation}`,
-      description: `Joined ${createProfileDto.department} department`,
+      profileId: profileId,
+      activityType: ActivityType.PROMOTION,
+      description: `Joined as ${createProfileDto.designation} in ${createProfileDto.department} department`,
     });
 
     return profile;
@@ -69,19 +69,45 @@ export class ProfileService {
 
   async getFullProfile(userId: string, requestingUser: User) {
     const profile = await this.getProfile(userId, requestingUser);
+    const profileId = profile.id;
 
-    const [performance, recentActivities, leaveBalance] = await Promise.all([
+    const [performance, activityEntities, leaveBalance] = await Promise.all([
       this.performanceRepository.getLatestPerformance(userId),
-      this.activityRepository.getRecentActivities(userId, 5),
+      this.activityRepository.getRecentActivities(profileId, 5), // Use profileId (number)
       this.getLeaveBalanceOverview(userId),
     ]);
+
+    const recentActivities = activityEntities.map((activity) => {
+      return new ActivityDao({
+        id: activity.id,
+        userId: profile.user?.id || userId,
+        type: activity.activityType as unknown as ActivityType,
+        description: activity.description || '',
+        createdAt: activity.activityDate || activity.createdAt,
+        displayDate: this.formatDate(
+          activity.activityDate || activity.createdAt,
+        ),
+      });
+    });
 
     return {
       profile,
       performance,
-      recentActivities,
+      recentActivities: recentActivities.map((activity) =>
+        activity.toSummary(),
+      ),
       leaveBalance,
     };
+  }
+
+  private formatDate(date: Date): string {
+    if (!date) return '';
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   }
 
   async updateProfile(
@@ -101,10 +127,11 @@ export class ProfileService {
       updateData,
     );
 
+    const profileId = profile.id;
+
     await this.activityRepository.createActivity({
-      userId,
-      type: ActivityType.TRAINING,
-      title: 'Profile Updated',
+      profileId: profileId,
+      activityType: ActivityType.TRAINING,
       description: 'Employee profile information was updated',
     });
 
@@ -123,14 +150,36 @@ export class ProfileService {
       reviewDate: new Date(performanceDto.reviewDate),
     });
 
+    const profile = await this.profileRepository.findByUserId(userId);
+    if (!profile) {
+      throw new NotFoundException(`Profile not found for user ${userId}`);
+    }
+
     await this.activityRepository.createActivity({
-      userId,
-      type: ActivityType.PERFORMANCE_REVIEW,
-      title: 'Completed Q3 Performance Review',
-      description: `Performance score: ${performanceDto.performanceScore}/5.0`,
+      profileId: profile.id,
+      activityType: ActivityType.PERFORMANCE_REVIEW,
+      description: `Completed performance review. Performance score: ${performanceDto.performanceScore}/5.0`,
     });
 
     return performance;
+  }
+
+  private canAccessProfile(userId: string, requestingUser: User): boolean {
+    // Users can access their own profiles
+    if (String(requestingUser.id) === String(userId)) {
+      return true;
+    }
+
+    // HR, Managers, and Admins can access any profile
+    if (
+      requestingUser.roles?.includes(UserRole.HR) ||
+      requestingUser.roles?.includes(UserRole.MANAGER) ||
+      requestingUser.roles?.includes(UserRole.ADMIN)
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   private async getUsedLeaves(
@@ -138,82 +187,83 @@ export class ProfileService {
     leaveType: string,
   ): Promise<number> {
     const currentYear = new Date().getFullYear();
+
+    console.log(
+      `Calculating used ${leaveType} leave for user ${userId} in year ${currentYear}`,
+    );
+
+    // For example, you might do something like this:
+    // return this.leaveRequestRepository.count({
+    //   where: {
+    //     user: { id: userId },
+    //     leaveType: { name: leaveType },
+    //     status: 'APPROVED',
+    //     startDate: Between(
+    //       new Date(currentYear, 0, 1),
+    //       new Date(currentYear, 11, 31)
+    //     )
+    //   }
+    // });
+
+    // For now, return a placeholder value
     return 0;
   }
+
   async getLeaveBalanceOverview(userId: string) {
     const profile = await this.profileRepository.findByUserId(userId);
     if (!profile) return null;
 
     return {
       annual: {
-        total: 0,
+        total: 25,
         used: await this.getUsedLeaves(userId, 'annual'),
-        remaining: 0,
+        remaining: 25 - (await this.getUsedLeaves(userId, 'annual')),
       },
       sick: {
-        total: 0,
+        total: 12,
         used: await this.getUsedLeaves(userId, 'sick'),
-        remaining: 0,
-        personal: {
-          total: 15,
-          used: await this.getUsedLeaves(userId, 'emergency'),
-          remaining: 15 - (await this.getUsedLeaves(userId, 'emergency')),
-        },
+        remaining: 12 - (await this.getUsedLeaves(userId, 'sick')),
+      },
+      personal: {
+        total: 5,
+        used: await this.getUsedLeaves(userId, 'personal'),
+        remaining: 5 - (await this.getUsedLeaves(userId, 'personal')),
       },
     };
-  }
-  private canAccessProfile(
-    profileUserId: string,
-    requestingUser: User,
-  ): boolean {
-    if (requestingUser.roles?.includes(UserRole.HR)) return true;
-
-    if (String(requestingUser.id) === String(profileUserId)) return true;
-
-    if (requestingUser.roles?.includes(UserRole.MANAGER)) {
-      return true;
-    }
-
-    return false;
   }
 
   async getDashboardData(userId: string) {
     const profile = await this.profileRepository.findByUserId(userId);
-    const performance: any =
-      await this.performanceRepository.getLatestPerformance(userId);
-    const recentActivities = await this.activityRepository.getRecentActivities(
-      userId,
-      4,
-    );
-    const leaveBalance = await this.getLeaveBalanceOverview(userId);
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
 
-    if (!profile) return null;
+    // Use profileId (number) instead of userId (string)
+    const rawActivities = await this.activityRepository.getRecentActivities(
+      profile.id,
+      5,
+    );
+
+    const activityDaos = rawActivities.map((activity) => {
+      return new ActivityDao({
+        id: activity.id,
+        userId: profile.user?.id || userId,
+        type: activity.activityType as unknown as ActivityType,
+        description: activity.description || '',
+        createdAt: activity.activityDate || activity.createdAt,
+      });
+    });
+
     return {
-      employeeInfo: {
+      profile: {
+        name: profile.name,
+        employeeId: profile.employeeId,
         department: profile.department,
         designation: profile.designation,
         joinDate: profile.joinDate,
-        employeeId: profile.employeeId,
-        yearsOfService: profile.yearsOfService,
-        gender: profile.gender,
       },
-      contactInfo: {
-        email: profile.user?.email,
-        phone: profile.phone,
-        emergencyContact: profile.emergencyContactName,
-        address: profile.address,
-      },
-      performance:
-        performance && typeof performance.toOverview === 'function'
-          ? performance.toOverview()
-          : {
-              attendanceRate: 0,
-              performanceScore: 0,
-              activeProjects: 0,
-            },
-      leaveBalance,
-      recentActivities:
-        recentActivities?.map((activity) => activity.toSummary()) || [],
+      recentActivities: activityDaos.map((activity) => activity.toSummary()),
+      leaveBalance: await this.getLeaveBalanceOverview(userId),
     };
   }
 }

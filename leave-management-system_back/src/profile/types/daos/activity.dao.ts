@@ -1,13 +1,18 @@
 import { ActivityType } from '../enums/activity-type.enum';
 
+// Updated ActivityDao class with numeric id to match your Activity entity
 export class ActivityDao {
-  id: number;
-  userId: number;
+  id: number; // Changed from string to number to match Activity entity
+  userId: string; // This remains a string (user ID)
   type: ActivityType;
   title: string;
   description?: string;
-  relatedEntityId?: number;
+  relatedEntityId?: string;
   createdAt: Date;
+
+  // Optional properties that may come from your Activity entity
+  activityDate?: Date;
+  displayDate?: string;
 
   constructor(partial: Partial<ActivityDao>) {
     Object.assign(this, partial);
@@ -29,7 +34,7 @@ export class ActivityDao {
     return 'Today';
   }
 
-  get displayDate(): string {
+  get displayFormattedDate(): string {
     return this.createdAt.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -44,7 +49,7 @@ export class ActivityDao {
       title: this.title,
       description: this.description,
       timeAgo: this.timeAgo,
-      displayDate: this.displayDate,
+      displayDate: this.displayDate || this.displayFormattedDate,
       createdAt: this.createdAt,
     };
   }

@@ -18,7 +18,7 @@ export class EmployeeProfile {
   id: number;
 
   @Column({ name: 'user_id' })
-  userId: string;
+  name: string;
 
   @OneToOne(() => User)
   @JoinColumn({ name: 'user_id' })
@@ -83,6 +83,7 @@ export class EmployeeProfile {
 
   @OneToMany(() => Performance, (performance) => performance.profile)
   performances: Performance[];
+  fullname: any;
 
   // Virtual properties
   get age(): number | null {

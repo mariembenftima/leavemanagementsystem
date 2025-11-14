@@ -18,7 +18,7 @@ import { LeaveTypesModule } from './leave-types/leave-types.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { LeaveRequestsModule } from './leave-requests/leave-requests.module';
 import { NotificationsModule } from './notifications/notifications.module';
-
+import { LeaveActivityService } from './profile/leave-activity.service';
 
 @Module({
   imports: [
@@ -54,9 +54,8 @@ import { NotificationsModule } from './notifications/notifications.module';
     NotificationsModule,
     TerminusModule,
     HttpModule,
-   
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, LeaveActivityService],
 })
 export class AppModule {}

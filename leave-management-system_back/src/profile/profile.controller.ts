@@ -14,24 +14,26 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 import { ProfileService } from './profile.service';
 import { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { EmployeeProfile } from './entities/employee-profile.entity';
 import { Performance } from './entities/performance.entity';
 import { User } from '../users/entities/users.entity';
+import { Activity } from './entities/activity.entity';
+import { LeaveBalancesService } from 'src/leave-balances/leave-balances.service';
 
-interface ActivityWithSummary {
-  toSummary?: () => ActivitySummary;
-  id?: number;
-  type?: string;
-  title?: string;
-  description?: string;
-  timeAgo?: string;
-  displayDate?: string;
-  createdAt?: Date;
+// Definition of the leave balance structure that matches what the service returns
+interface LeaveBalanceItem {
+  total: number;
+  used: number;
+  remaining: number;
 }
 
+interface LeaveBalanceRecord {
+  [key: string]: LeaveBalanceItem;
+}
+
+// Activity summary structure
 interface ActivitySummary {
   id: number;
   type: string;
@@ -40,20 +42,6 @@ interface ActivitySummary {
   timeAgo: string;
   displayDate: string;
   createdAt: Date;
-}
-
-// ✅ Interface pour Leave Balance
-interface LeaveBalanceType {
-  total: number;
-  used: number;
-  remaining: number;
-}
-
-interface LeaveBalanceSummary {
-  annual?: LeaveBalanceType;
-  sick?: LeaveBalanceType;
-  personal?: LeaveBalanceType;
-  [key: string]: LeaveBalanceType | undefined;
 }
 
 interface PartialProfile {
@@ -90,6 +78,57 @@ export class ProfileController {
       email: authenticatedUser.email,
       roles: authenticatedUser.roles,
     } as Partial<User>;
+  }
+
+  // Helper method to convert Activity to ActivitySummary
+  private activityToSummary(activity: Activity): ActivitySummary {
+    return {
+      id: activity.id,
+      type: activity.activityType,
+      title: this.getActivityTitle(activity.activityType),
+      description: activity.description,
+      timeAgo: this.getTimeAgo(activity.createdAt),
+      displayDate: activity.activityDate
+        ? this.formatDate(activity.activityDate)
+        : this.formatDate(activity.createdAt),
+      createdAt: activity.activityDate || activity.createdAt,
+    };
+  }
+
+  // Helper method to format date to display string
+  private formatDate(date: Date): string {
+    if (!date) return '';
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  // Helper method to calculate time ago
+  private getTimeAgo(date: Date): string {
+    if (!date) return '';
+
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
+
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `${diffInMinutes} minutes ago`;
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 30) return `${diffInDays} days ago`;
+
+    const diffInMonths = Math.floor(diffInDays / 30);
+    if (diffInMonths < 12) return `${diffInMonths} months ago`;
+
+    const diffInYears = Math.floor(diffInMonths / 12);
+    return `${diffInYears} years ago`;
   }
 
   @UseGuards(JwtAuthGuard)
@@ -138,55 +177,50 @@ export class ProfileController {
     console.log('🔍 Dashboard request for user:', user);
 
     let profileData: EmployeeProfile | PartialProfile | null = null;
-    let leaveBalance: LeaveBalanceSummary = {}; // ✅ Type correct
+    let leaveBalance: LeaveBalanceRecord = {};
     let recentActivities: ActivitySummary[] = [];
     let performance: Performance | null = null;
 
     try {
+      // Get profile data
       profileData = await this.profileService.getProfile(
         user.userId,
         this.toUserEntity(user) as User,
       );
 
-      // ✅ Cast vers LeaveBalanceSummary
+      // Get leave balance data
       const rawLeaveBalance = await this.leaveBalancesService.findByUserId(
         user.userId,
       );
-      leaveBalance = rawLeaveBalance as LeaveBalanceSummary;
 
+      // Use proper type for leave balance (no type assertion)
+      leaveBalance = rawLeaveBalance || {};
+
+      // Get activities data
       if (
         'activityRepository' in this.profileService &&
         this.profileService.activityRepository
       ) {
-        const rawActivities =
-          await this.profileService.activityRepository.getRecentActivities(
-            user.userId,
-            5,
-          );
+        // First get the profile ID which is needed for the activity repository
+        const profile = profileData as EmployeeProfile;
+        if (profile && profile.id) {
+          // Use profile ID (number) instead of userId (string)
+          const rawActivities =
+            await this.profileService.activityRepository.getRecentActivities(
+              profile.id,
+              5,
+            );
 
-        if (Array.isArray(rawActivities)) {
-          recentActivities = (rawActivities as ActivityWithSummary[]).map(
-            (activity): ActivitySummary => {
-              if (
-                activity.toSummary &&
-                typeof activity.toSummary === 'function'
-              ) {
-                return activity.toSummary();
-              }
-              return {
-                id: activity.id || 0,
-                type: activity.type || '',
-                title: activity.title || 'Activity',
-                description: activity.description,
-                timeAgo: activity.timeAgo || '',
-                displayDate: activity.displayDate || '',
-                createdAt: activity.createdAt || new Date(),
-              };
-            },
-          );
+          // Convert activities to our ActivitySummary format without casting
+          if (Array.isArray(rawActivities)) {
+            recentActivities = rawActivities.map((activity) =>
+              this.activityToSummary(activity),
+            );
+          }
         }
       }
 
+      // Get performance data
       if (
         'performanceRepository' in this.profileService &&
         this.profileService.performanceRepository
@@ -195,7 +229,7 @@ export class ProfileController {
           await this.profileService.performanceRepository.getLatestPerformance(
             user.userId,
           );
-        performance = rawPerformance ? (rawPerformance as Performance) : null;
+        performance = rawPerformance || null;
       }
     } catch (error: unknown) {
       const errorMessage =
@@ -205,7 +239,7 @@ export class ProfileController {
         errorMessage,
       );
 
-      // ✅ Fallback typé
+      // Use fallback data with proper types
       leaveBalance = {
         annual: { total: 25, used: 5, remaining: 20 },
         sick: { total: 12, used: 2, remaining: 10 },
@@ -348,6 +382,30 @@ export class ProfileController {
         message: 'Unable to retrieve profile',
         error: errorMessage,
       };
+    }
+  }
+
+  // Helper method to generate a title from activity type
+  private getActivityTitle(activityType: string): string {
+    switch (activityType) {
+      case 'leave_applied':
+        return 'Leave Request Submitted';
+      case 'leave_approved':
+        return 'Leave Request Approved';
+      case 'leave_rejected':
+        return 'Leave Request Rejected';
+      case 'leave_cancelled':
+        return 'Leave Request Cancelled';
+      case 'performance_review':
+        return 'Performance Review';
+      case 'promotion':
+        return 'Promotion';
+      case 'training':
+        return 'Training';
+      case 'workshop':
+        return 'Workshop';
+      default:
+        return 'Activity';
     }
   }
 }

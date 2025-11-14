@@ -1,7 +1,6 @@
 import { Request } from 'express';
 
 export interface AuthenticatedUser {
-  // Core fields from JWT validation
   userId: string;
   email: string;
   roles: string[];
