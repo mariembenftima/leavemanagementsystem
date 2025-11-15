@@ -43,11 +43,10 @@ export class ApiService {
       .pipe(map((res) => this.mapper.fromApi<EmployeeProfile>(res.data)));
   }
 
-  uploadProfilePicture(userId: string, file: File): Observable<ApiResponse<any>> {
+  uploadProfilePicture(userId: string, file: File) {
     const formData = new FormData();
     formData.append('file', file);
-
-    return this.http.post<ApiResponse<any>>(
+    return this.http.post(
       `${this.apiUrl}/users/${userId}/profile-pic`,
       formData
     );
@@ -63,7 +62,7 @@ export class ApiService {
   getLeaveTypes(): Observable<LeaveType[]> {
     return this.http
       .get<ApiResponse<LeaveType[]>>(`${this.apiUrl}/leave-types`)
-      .pipe(map((res) => this.mapper.fromApiArray<LeaveType>(res.data || []))); 
+      .pipe(map((res) => this.mapper.fromApiArray<LeaveType>(res.data || [])));
   }
 
 
@@ -98,7 +97,7 @@ export class ApiService {
   getLeaveRequests(): Observable<LeaveRequest[]> {
     return this.http
       .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests`)
-      .pipe(map((res) => this.mapper.fromApiArray<LeaveRequest>(res.data || []))); 
+      .pipe(map((res) => this.mapper.fromApiArray<LeaveRequest>(res.data || [])));
   }
 
   getTeams(): Observable<Team[]> {
@@ -141,7 +140,7 @@ export class ApiService {
         })
       );
   }
-  
+
   getAllLeaveRequests(): Observable<LeaveRequest[]> {
     return this.http
       .get<ApiResponse<LeaveRequest[]>>(`${this.apiUrl}/leave-requests/all`)
@@ -176,7 +175,7 @@ export class ApiService {
       .get<ApiResponse<User[]>>(`${this.apiUrl}/users`)
       .pipe(map((res) => this.mapper.fromApiArray<User>(res.data || [])));
   }
-  
+
   getAllUsersCount(): Observable<number> {
     return this.getAllUsers().pipe(map((users) => users.length));
   }

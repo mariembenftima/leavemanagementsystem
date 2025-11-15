@@ -238,7 +238,6 @@ export class ProfileService {
       throw new NotFoundException('Profile not found');
     }
 
-    // Use profileId (number) instead of userId (string)
     const rawActivities = await this.activityRepository.getRecentActivities(
       profile.id,
       5,

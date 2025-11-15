@@ -22,7 +22,7 @@ const routes: Routes = [
   { path: 'register', component: RegisterComponent },
   { path: 'profile', component: UserProfile, canActivate: [AuthGuard] },
   { path: 'dashboard', component: UserDashboard, canActivate: [AuthGuard] },
-  { path: 'calender', component: UserCalender, canActivate: [AuthGuard] },
+  { path: 'calendar', component: UserCalender, canActivate: [AuthGuard] },
   { path: 'leaverequests', component: LeaveRequestComponent, canActivate: [AuthGuard] },
   { path: 'analytics', component: LeaveAnalytics, canActivate: [AuthGuard] },
   { path: 'approves', component: UserApproves, canActivate: [RoleGuard], data: { roles: ['ADMIN', 'HR_MANAGER'] } },
