@@ -10,6 +10,7 @@ import { ProfileRepository } from './repositories/profile.repository';
 import { ActivityRepository } from './repositories/activity.repository';
 import { PerformanceRepository } from './repositories/performance.repository';
 import { LeaveBalancesModule } from '../leave-balances/leave-balances.module';
+import { LeaveActivityService } from './leave-activity.service';
 
 @Module({
   imports: [
@@ -23,6 +24,6 @@ import { LeaveBalancesModule } from '../leave-balances/leave-balances.module';
     PerformanceRepository,
   ],
   controllers: [ProfileController],
-  exports: [ProfileService],
+  exports: [ProfileService, LeaveActivityService],
 })
 export class ProfileModule {}

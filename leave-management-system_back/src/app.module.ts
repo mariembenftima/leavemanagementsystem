@@ -1,13 +1,7 @@
-import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { TerminusModule } from '@nestjs/terminus';
-import { HttpModule } from '@nestjs/axios';
-
+import { Module } from '@nestjs/common';
 import { SharedModule } from './shared/shared.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { TeamsModule } from './teams/teams.module';
@@ -18,12 +12,14 @@ import { LeaveTypesModule } from './leave-types/leave-types.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { LeaveRequestsModule } from './leave-requests/leave-requests.module';
 import { NotificationsModule } from './notifications/notifications.module';
-import { LeaveActivityService } from './profile/leave-activity.service';
+import { TerminusModule } from '@nestjs/terminus';
+import { HttpModule } from '@nestjs/axios';
+import { AppService } from './app.service';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -40,7 +36,6 @@ import { LeaveActivityService } from './profile/leave-activity.service';
       }),
       inject: [ConfigService],
     }),
-
     SharedModule,
     UsersModule,
     AuthModule,
@@ -56,6 +51,6 @@ import { LeaveActivityService } from './profile/leave-activity.service';
     HttpModule,
   ],
   controllers: [AppController],
-  providers: [AppService, LeaveActivityService],
+  providers: [AppService],
 })
 export class AppModule {}

@@ -1,18 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { ActivityRepository } from './repositories/activity.repository';
 import { EmployeeProfile } from './entities/employee-profile.entity';
 import { LeaveRequest } from 'src/leave-requests/entities/leave-request.entity';
 import { User } from 'src/users/entities/users.entity';
 import { ActivityType } from './types/enums/activity-type.enum';
+import { ProfileRepository } from './repositories/profile.repository';
 
 @Injectable()
 export class LeaveActivityService {
   constructor(
-    private readonly activityRepository: ActivityRepository,
+    @InjectRepository(ActivityRepository)
+    private activityRepository: ActivityRepository,
+
     @InjectRepository(EmployeeProfile)
-    private readonly profileRepository: Repository<EmployeeProfile>,
+    private profileRepository: ProfileRepository,
   ) {}
 
   private async getProfileId(userId: string): Promise<number> {
@@ -45,7 +47,6 @@ export class LeaveActivityService {
     leaveRequest: LeaveRequest,
     approverName: string,
   ): Promise<void> {
-    // Get the profile ID for the user who owns the leave request
     const profileId = await this.getProfileId(leaveRequest.user.id);
 
     await this.activityRepository.createActivity({
