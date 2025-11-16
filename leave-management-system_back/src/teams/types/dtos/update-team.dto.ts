@@ -1,5 +1,9 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional } from 'class-validator';
 
 export class UpdateTeamDto {
-  @IsOptional() @IsString() readonly name?: string;
+  @ApiPropertyOptional({ description: 'Team name', example: 'Marketing Team' })
+  @IsOptional()
+  @IsString()
+  readonly name?: string;
 }

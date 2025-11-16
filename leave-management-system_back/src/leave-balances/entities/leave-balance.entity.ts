@@ -19,25 +19,24 @@ export class LeaveBalanceEntity {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToOne(() => LeaveTypeEntity)
+  @ManyToOne(() => LeaveTypeEntity, { eager: true })
   @JoinColumn({ name: 'leave_type_id' })
   leaveType: LeaveTypeEntity;
 
   @Column('int')
   year: number;
-  @Column('int')
+
+  @Column('int', { default: 0 })
   carryover: number;
 
-  @Column('int')
+  @Column('int', { default: 0 })
   used: number;
+
   get total(): number {
-    if (this.leaveType?.maxDays) {
-      return this.leaveType.maxDays + this.carryover;
-    }
-    return 21 + this.carryover;
+    return (this.leaveType?.maxDays || 21) + (this.carryover || 0);
   }
 
   get remaining(): number {
-    return this.total - this.used;
+    return this.total - (this.used || 0);
   }
 }
