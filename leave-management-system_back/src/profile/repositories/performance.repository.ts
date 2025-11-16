@@ -1,17 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { Performance } from '../entities/performance.entity';
+import { EmployeeProfile } from '../entities/employee-profile.entity';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class PerformanceRepository extends Repository<Performance> {
-  constructor(private dataSource: DataSource) {
+  constructor(
+    @InjectRepository(Performance)
+    private readonly performanceRepo: Repository<Performance>,
+    private dataSource: DataSource,
+  ) {
     super(Performance, dataSource.createEntityManager());
   }
 
   async getLatestPerformance(userId: string): Promise<Performance | null> {
-    return this.createQueryBuilder('performance')
+    return this.performanceRepo
+      .createQueryBuilder('performance')
       .leftJoinAndSelect('performance.profile', 'profile')
-      .where('profile.userId = :userId', { userId })
+      .leftJoinAndSelect('profile.user', 'user')
+      .where('user.id = :userId', { userId })
       .orderBy('performance.createdAt', 'DESC')
       .getOne();
   }
@@ -26,25 +34,26 @@ export class PerformanceRepository extends Repository<Performance> {
     feedback?: string;
   }): Promise<Performance> {
     const profile = await this.dataSource
-      .getRepository('EmployeeProfile')
+      .getRepository(EmployeeProfile)
       .createQueryBuilder('profile')
-      .where('profile.userId = :userId', { userId: data.userId })
+      .leftJoinAndSelect('profile.user', 'user')
+      .where('user.id = :userId', { userId: data.userId })
       .getOne();
 
     if (!profile) {
       throw new Error(`Profile not found for user ${data.userId}`);
     }
 
-    const performance = this.create({
-      profileId: profile.id,
+    const performance = this.performanceRepo.create({
+      profile: { id: profile.id },
       rating: data.performanceScore,
-      reviewerId: String(data.reviewerId),
+      reviewer: { id: String(data.reviewerId) },
       goals: data.goals,
       achievements: data.achievements,
       feedback: data.feedback,
       reviewPeriod: new Date().getFullYear().toString(),
     });
 
-    return this.save(performance);
+    return this.performanceRepo.save(performance);
   }
 }

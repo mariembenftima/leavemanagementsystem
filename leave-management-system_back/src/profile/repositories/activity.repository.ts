@@ -23,7 +23,7 @@ export class ActivityRepository extends Repository<Activity> {
 
   async createActivity(dto: CreateActivityDto): Promise<Activity> {
     const activity = this.activityRepo.create({
-      profileId: dto.profileId,
+      profile: { id: dto.profileId }, // Use the relation object
       activityType: dto.activityType,
       description: dto.description,
       activityDate: dto.activityDate || new Date(),
@@ -37,7 +37,7 @@ export class ActivityRepository extends Repository<Activity> {
     count: number = 5,
   ): Promise<Activity[]> {
     return this.activityRepo.find({
-      where: { profileId },
+      where: { profile: { id: profileId } }, // Query using relation path
       order: { createdAt: 'DESC' },
       take: count,
       relations: ['profile'],
@@ -68,7 +68,7 @@ export class ActivityRepository extends Repository<Activity> {
 
     return this.activityRepo.find({
       where: {
-        profileId,
+        profile: { id: profileId }, // Query using relation path
         activityType: In(leaveActivityTypes),
       },
       order: { createdAt: 'DESC' },
@@ -86,12 +86,13 @@ export class ActivityRepository extends Repository<Activity> {
 
     return this.activityRepo.find({
       where: {
-        profileId: In(profileIds),
+        profile: { id: In(profileIds) }, // Query using relation path
       },
       order: { createdAt: 'DESC' },
       take: count * profileIds.length,
     });
   }
+
   async getActivitiesForDateRange(
     profileId: number,
     startDate: Date,
@@ -99,7 +100,7 @@ export class ActivityRepository extends Repository<Activity> {
   ): Promise<Activity[]> {
     return this.activityRepo.find({
       where: {
-        profileId,
+        profile: { id: profileId }, // Query using relation path
         activityDate: Between(startDate, endDate),
       },
       order: { activityDate: 'DESC' },

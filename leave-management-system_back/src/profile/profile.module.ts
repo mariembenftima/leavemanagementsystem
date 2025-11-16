@@ -18,20 +18,17 @@ import { LeaveBalancesModule } from '../leave-balances/leave-balances.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Performance,
-      EmployeeProfile,
-      Activity,
-
-      ProfileRepository,
-      PerformanceRepository,
-      ActivityRepository,
-      ProfileRepository,
-    ]),
+    TypeOrmModule.forFeature([Performance, EmployeeProfile, Activity]),
     LeaveBalancesModule,
   ],
   controllers: [ProfileController],
-  providers: [ProfileService, LeaveActivityService],
+  providers: [
+    ProfileService,
+    LeaveActivityService,
+    ProfileRepository,
+    PerformanceRepository,
+    ActivityRepository,
+  ],
   exports: [ProfileService, LeaveActivityService],
 })
 export class ProfileModule {}
