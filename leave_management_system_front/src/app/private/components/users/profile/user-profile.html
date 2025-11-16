@@ -20,7 +20,7 @@
             <div id="profilePrintable">
               <div class="profile-card">
                 <div class="profile-image-container">
-                  <img src="assets/default-profile.png" alt="Profile photo" class="profile-image"
+                  <img [src]="employeeData.avatarUrl || 'https://ui-avatars.com/api/?name=' + (employeeData.fullname || 'User') + '&background=8b5cf6&color=fff'" alt="Profile photo" class="profile-image"
                     (click)="changeProfileImage()" />
                   <div class="status-indicator" [title]="employeeData.isActive ? 'Active Employee' : 'Inactive'"></div>
                 </div>

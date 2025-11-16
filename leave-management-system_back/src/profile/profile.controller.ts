@@ -132,35 +132,6 @@ export class ProfileController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get(':userId')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get a profile by user ID (admin/HR)' })
-  async getProfileById(
-    @Param('userId') userId: string,
-    @Req() req: AuthenticatedRequest,
-  ) {
-    const requester = req.user;
-    if (!requester) {
-      throw new UnauthorizedException('User not found in request');
-    }
-
-    const profile = await this.profileService.getProfile(
-      userId,
-      this.toUserEntity(requester) as User,
-    );
-
-    if (!profile) {
-      throw new NotFoundException('Profile not found');
-    }
-
-    return {
-      success: true,
-      data: profile,
-      message: 'Profile retrieved successfully',
-    };
-  }
-
-  @UseGuards(JwtAuthGuard)
   @Get('dashboard')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get dashboard data for the current user' })
@@ -383,6 +354,34 @@ export class ProfileController {
         error: errorMessage,
       };
     }
+  }
+  @UseGuards(JwtAuthGuard)
+  @Get(':userId')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get a profile by user ID (admin/HR)' })
+  async getProfileById(
+    @Param('userId') userId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const requester = req.user;
+    if (!requester) {
+      throw new UnauthorizedException('User not found in request');
+    }
+
+    const profile = await this.profileService.getProfile(
+      userId,
+      this.toUserEntity(requester) as User,
+    );
+
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    return {
+      success: true,
+      data: profile,
+      message: 'Profile retrieved successfully',
+    };
   }
 
   // Helper method to generate a title from activity type

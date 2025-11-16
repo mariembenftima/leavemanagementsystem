@@ -36,7 +36,6 @@ export class AuthService {
     if (token && user) {
       try {
         const parsed: any = JSON.parse(user);
-        // normalize roles to array
         if (parsed && parsed.roles) {
           if (typeof parsed.roles === 'string') {
             parsed.roles = parsed.roles.split(',').map((r: string) => r.trim());
@@ -56,7 +55,6 @@ export class AuthService {
         tap((response) => {
           if (response.success && response.data.access_token) {
             const user: any = response.data.user || {};
-            // normalize roles to array
             if (user.roles && typeof user.roles === 'string') {
               user.roles = user.roles.split(',').map((r: string) => r.trim());
             }

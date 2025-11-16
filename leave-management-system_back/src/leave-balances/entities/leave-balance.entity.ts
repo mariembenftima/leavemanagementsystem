@@ -25,12 +25,19 @@ export class LeaveBalanceEntity {
 
   @Column('int')
   year: number;
-  @Column({ name: 'total', type: 'int' })
-  total: number;
-
   @Column('int')
   carryover: number;
 
   @Column('int')
   used: number;
+  get total(): number {
+    if (this.leaveType?.maxDays) {
+      return this.leaveType.maxDays + this.carryover;
+    }
+    return 21 + this.carryover;
+  }
+
+  get remaining(): number {
+    return this.total - this.used;
+  }
 }

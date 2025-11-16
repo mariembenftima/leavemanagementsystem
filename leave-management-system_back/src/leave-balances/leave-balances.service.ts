@@ -40,12 +40,10 @@ export class LeaveBalancesService implements LeaveBalancesPort {
     return await this.repo.save(lb);
   }
 
-  // ✅ Get all leave balances
   async findAll() {
     return await this.repo.find({ relations: ['user', 'leaveType'] });
   }
 
-  // ✅ Get a user's aggregated leave balance summary (used for /me)
   async findByUserId(userId: string) {
     const balances = await this.repo.find({
       where: { user: { id: String(userId) } },
@@ -53,7 +51,6 @@ export class LeaveBalancesService implements LeaveBalancesPort {
     });
 
     if (!balances.length) {
-      // Return defaults if no records exist
       return {
         annual: { total: 24, used: 0, remaining: 24 },
         sick: { total: 10, used: 0, remaining: 10 },
@@ -61,7 +58,6 @@ export class LeaveBalancesService implements LeaveBalancesPort {
       };
     }
 
-    // Aggregate by leave type name
     const summary: Record<
       string,
       {
@@ -71,13 +67,15 @@ export class LeaveBalancesService implements LeaveBalancesPort {
       }
     > = {};
     for (const bal of balances) {
-      const total = (bal.leaveType?.maxDays || 0) + bal.carryover;
-      summary[bal.leaveType.name.toLowerCase()] = {
-        total,
-        used: bal.used,
-        remaining: total - bal.used,
-      };
+      const total = (bal.leaveType?.maxDays || 24) + (bal.carryover || 0);
+      const used = bal.used;
+      const remaining = total - used;
+
+      const typeName = bal.leaveType?.name?.toLowerCase() || 'unknown';
+
+      summary[typeName] = { total, used, remaining };
     }
+
     return summary;
   }
 

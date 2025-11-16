@@ -22,16 +22,29 @@ export class ApiService {
 
   constructor(private http: HttpClient, private mapper: DataMapperService) { }
 
-  getProfile(userId?: string): Observable<EmployeeProfile> {
-    const url = userId
-      ? `${this.apiUrl}/profile/${userId}`
-      : `${this.apiUrl}/profile/me`;
+  getProfile(): Observable<EmployeeProfile> {
+    return this.http.get<any>(`${this.apiUrl}/profile/me`).pipe(
+      map((res) => {
+        console.log('📥 Profile Response:', res);
 
-    return this.http.get<ApiResponse<EmployeeProfile>>(url).pipe(
-      map((res) => this.mapper.fromApi<EmployeeProfile>(res.data))
+        if (res?.data) {
+          return this.mapper.fromApi<EmployeeProfile>(res.data);
+        }
+        if (res?.user) {
+          return this.mapper.fromApi<EmployeeProfile>(res.user);
+        }
+        return this.mapper.fromApi<EmployeeProfile>(res);
+      })
     );
   }
-
+  getMyLeaveBalances(): Observable<Record<string, LeaveBalance>> {
+    return this.http.get<any>(`${this.apiUrl}/leave-balances/me`).pipe(
+      map((res) => {
+        console.log('📥 Leave Balances Response:', res);
+        return res?.data || res || {};
+      })
+    );
+  }
   updateProfile(
     profileData: Partial<EmployeeProfile>
   ): Observable<EmployeeProfile> {
@@ -185,7 +198,6 @@ export class ApiService {
       .get<ApiResponse<Record<string, LeaveBalance>>>(`${this.apiUrl}/leave-balances/user/${userId}`)
       .pipe(map((res) => this.mapper.fromApi<Record<string, LeaveBalance>>(res.data)));
   }
-
   registerWithFile(formData: FormData): Promise<any> {
     const url = `${this.apiUrl}/auth/register`;
     return this.http.post<ApiResponse<any>>(url, formData).toPromise();

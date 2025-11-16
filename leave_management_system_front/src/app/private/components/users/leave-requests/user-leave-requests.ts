@@ -79,7 +79,7 @@ export class LeaveRequestComponent implements OnInit {
         this.currentEmployee = JSON.parse(storedUser);
       } else {
         const currentUserStr = localStorage.getItem('currentUser');
-        const userId = currentUserStr ? JSON.parse(currentUserStr)?.id : null; this.currentEmployee = (await this.apiService.getProfile(userId).toPromise()) ?? null;
+        const userId = currentUserStr ? JSON.parse(currentUserStr)?.id : null; this.currentEmployee = (await this.apiService.getProfile().toPromise()) ?? null;
       }
 
       console.log('✅ Loaded employee data:', this.currentEmployee);

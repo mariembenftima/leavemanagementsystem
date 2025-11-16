@@ -16,25 +16,20 @@ export class LeaveActivityService {
     @InjectRepository(EmployeeProfile)
     private profileRepository: ProfileRepository,
   ) {}
-
   private async getProfileId(userId: string): Promise<number> {
     const profile = await this.profileRepository.findOne({
       where: { user: { id: userId } },
     });
-
     if (!profile) {
       throw new Error(`Profile not found for user ID: ${userId}`);
     }
-
     return profile.id;
   }
-
   async createLeaveAppliedActivity(
     leaveRequest: LeaveRequest,
     user: User,
   ): Promise<void> {
     const profileId = await this.getProfileId(user.id);
-
     await this.activityRepository.createActivity({
       profileId,
       activityType: ActivityType.LEAVE_APPLIED,
@@ -42,13 +37,11 @@ export class LeaveActivityService {
       activityDate: new Date(),
     });
   }
-
   async createLeaveApprovedActivity(
     leaveRequest: LeaveRequest,
     approverName: string,
   ): Promise<void> {
     const profileId = await this.getProfileId(leaveRequest.user.id);
-
     await this.activityRepository.createActivity({
       profileId,
       activityType: ActivityType.LEAVE_APPROVED,
@@ -56,13 +49,11 @@ export class LeaveActivityService {
       activityDate: new Date(),
     });
   }
-
   async createLeaveRejectedActivity(
     leaveRequest: LeaveRequest,
     rejectorName: string,
   ): Promise<void> {
     const profileId = await this.getProfileId(leaveRequest.user.id);
-
     await this.activityRepository.createActivity({
       profileId,
       activityType: ActivityType.LEAVE_REJECTED,
@@ -70,13 +61,11 @@ export class LeaveActivityService {
       activityDate: new Date(),
     });
   }
-
   async createLeaveCancelledActivity(
     leaveRequest: LeaveRequest,
     cancelerName: string,
   ): Promise<void> {
     const profileId = await this.getProfileId(leaveRequest.user.id);
-
     await this.activityRepository.createActivity({
       profileId,
       activityType: ActivityType.LEAVE_CANCELLED,
@@ -84,7 +73,6 @@ export class LeaveActivityService {
       activityDate: new Date(),
     });
   }
-
   private formatDate(date: Date): string {
     if (!date) return 'Unknown';
     return date.toLocaleDateString('en-US', {

@@ -19,12 +19,11 @@ export class UserNavBar implements OnInit, OnDestroy {
   navItems: NavItem[] = [
     { label: 'Dashboard', route: '/dashboard' },
     { label: 'Profile', route: '/profile' },
-    { label: 'Calendar', route: '/calender' },
+    { label: 'Calendar', route: '/calendar' },
     { label: 'Leave Requests', route: '/leaverequests' },
     { label: 'Approvals', route: '/approves' },
   ];
 
-  // User data
   currentUser = {
     name: 'Loading...',
     email: 'loading...',
@@ -32,7 +31,6 @@ export class UserNavBar implements OnInit, OnDestroy {
     role: 'employee',
   };
 
-  // Computed properties for template
   get userName(): string {
     return this.currentUser.name;
   }

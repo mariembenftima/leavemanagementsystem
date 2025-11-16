@@ -45,7 +45,7 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     const token = localStorage.getItem('authToken');
     if (!token) {
       console.warn('⚠️ No token found, redirecting to login...');
-      window.location.href = '/login'; 
+      window.location.href = '/login';
       return;
     }
 
@@ -69,72 +69,50 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private loadEmployeeProfile(): void {
-    const userId = this.getCurrentUserId();
-    this.apiService.getProfile(userId).subscribe({
+    this.apiService.getProfile().subscribe({  // ✅ No userId needed
       next: (profileData) => {
+        console.log('✅ Profile:', profileData);
         if (profileData) {
           this.employeeData = profileData;
           this.isLoading = false;
-        } else {
-          console.error('No profile data received');
-          this.hasError = true;
-          this.isLoading = false;
         }
       },
       error: (err) => {
-        console.error('Failed to load employee profile:', err);
-        if (err.status === 404) {
-          this.employeeData = this.getEmptyProfileData();
-          this.isLoading = false;
-        } else {
-          this.hasError = true;
-          this.isLoading = false;
-        }
+        console.error('❌ Profile error:', err);
+        this.hasError = true;
+        this.isLoading = false;
       },
     });
   }
-
-  private getEmptyProfileData(): EmployeeProfile {
-    return {
-  userId: this.getCurrentUserId(),
-  fullname: '',
-  email: 'dfsc',
-  phone: '',
-  department: '',
-  position: '',
-  hireDate: new Date().toISOString().split('T')[0],
-  gender: '',
-  dateOfBirth: '',
-  address: '',
-  emergencyContactName: '',
-  emergencyContactPhone: '',
-  maritalStatus: '',
-  nationality: '',
-  salary: 0,
-  bankAccountNumber: '',
-  roles: ['employee'],
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  isActive: true,
-  id: 0,
-  employeeId: '',
-  firstName: '',
-  lastName: '',
-};
+getAge(): number | null {
+    if (!this.employeeData?.dateOfBirth) {
+      return null;
+    }
+    
+    const today = new Date();
+    const birthDate = new Date(this.employeeData.dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return Math.max(0, age);
   }
 
   private loadLeaveBalances(): void {
-    const userId = this.getCurrentUserId();
-    this.apiService.getUserLeaveBalances(userId).subscribe({
+    this.apiService.getMyLeaveBalances().subscribe({  // ✅ Use new method
       next: (balances) => {
+        console.log('✅ Balances:', balances);
         this.leaveBalances = balances;
       },
       error: (err) => {
-        console.error('Failed to load leave balances:', err);
+        console.error('❌ Balances error:', err);
+        this.leaveBalances = {};
       },
     });
   }
-
   ngAfterViewInit(): void {
     document.querySelectorAll('.modal').forEach((modal) => {
       modal.addEventListener('click', (e: Event) => {
@@ -145,6 +123,24 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     this.initializeCharts();
     this.updateClock();
     this.clockInterval = window.setInterval(() => this.updateClock(), 1000);
+  }
+  getYearsOfExperience(): number {
+    if (!this.employeeData?.hireDate && !this.employeeData?.hireDate) {
+      return 0;
+    }
+
+    const joinDate = this.employeeData.hireDate || this.employeeData.hireDate;
+    const join = new Date(joinDate);
+    const today = new Date();
+
+    const years = today.getFullYear() - join.getFullYear();
+    const monthDiff = today.getMonth() - join.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < join.getDate())) {
+      return Math.max(0, years - 1);
+    }
+
+    return Math.max(0, years);
   }
 
   ngOnDestroy(): void {
