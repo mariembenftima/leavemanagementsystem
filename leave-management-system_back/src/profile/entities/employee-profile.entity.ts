@@ -17,9 +17,6 @@ export class EmployeeProfile {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'user_id' })
-  name: string;
-
   @OneToOne(() => User)
   @JoinColumn({ name: 'user_id' })
   user: User;
@@ -83,9 +80,11 @@ export class EmployeeProfile {
 
   @OneToMany(() => Performance, (performance) => performance.profile)
   performances: Performance[];
-  fullname: any;
 
-  // Virtual properties
+  get fullname(): string {
+    return this.user?.fullname || '';
+  }
+
   get age(): number | null {
     if (!this.dateOfBirth) return null;
     const today = new Date();

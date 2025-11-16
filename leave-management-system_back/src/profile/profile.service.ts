@@ -255,7 +255,7 @@ export class ProfileService {
 
     return {
       profile: {
-        name: profile.name,
+        name: profile.fullname,
         employeeId: profile.employeeId,
         department: profile.department,
         designation: profile.designation,
