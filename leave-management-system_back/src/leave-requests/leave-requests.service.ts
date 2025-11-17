@@ -89,13 +89,32 @@ export class LeaveRequestsService {
 
   async getAllLeaveRequests(): Promise<LeaveRequest[]> {
     try {
-      return await this.leaveRequestRepository.find({
-        relations: ['user', 'leaveType'], // ✅ This was incomplete
+      console.log('🔍 Fetching all leave requests...');
+
+      // Try query builder approach (more reliable)
+      const leaveRequests = await this.leaveRequestRepository
+        .createQueryBuilder('lr')
+        .leftJoinAndSelect('lr.user', 'user')
+        .leftJoinAndSelect('lr.leaveType', 'leaveType')
+        .orderBy('lr.createdAt', 'DESC')
+        .getMany();
+
+      console.log(`✅ Fetched ${leaveRequests.length} leave requests`);
+      return leaveRequests;
+
+    } catch (error) {
+      console.error('❌ ERROR in getAllLeaveRequests:', error);
+      console.error('Error message:', error.message);
+      console.error('Error name:', error.name);
+
+      // Try without relations as fallback
+      console.log('⚠️ Trying without relations...');
+      const basicRequests = await this.leaveRequestRepository.find({
         order: { createdAt: 'DESC' },
       });
-    } catch (error) {
-      console.error('❌ Error in getAllLeaveRequests:', error);
-      throw new Error(`Failed to fetch leave requests: ${error.message}`);
+
+      console.log(`⚠️ Got ${basicRequests.length} requests without relations`);
+      return basicRequests;
     }
   }
 

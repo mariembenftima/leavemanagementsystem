@@ -5,7 +5,6 @@ import {
   IsOptional,
   IsString,
   IsNumber,
-  //IsEmail,
   IsPhoneNumber,
 } from 'class-validator';
 import { Gender } from '../enums/gender.enum';

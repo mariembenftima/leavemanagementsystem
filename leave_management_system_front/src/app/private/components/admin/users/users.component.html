@@ -1,201 +1,266 @@
-<div class="users-container">
-  <div class="page-header">
-    <div>
-      <h1 class="page-title">User Management</h1>
-      <p class="page-subtitle">Manage user accounts, roles, and permissions</p>
-    </div>
-  </div>
+<div class="app-container">
+  <app-admin-nav-bar></app-admin-nav-bar>
 
-  <div class="filter-card">
-    <div class="filter-row">
-      <!-- Search -->
-      <div class="search-wrapper">
-        <i class="search-icon bi bi-search"></i>
-        <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onSearch()" class="search-input"
-          placeholder="Search by name, email, or username..." />
+  <div class="main-content users-main">
+    <app-admin-side-bar></app-admin-side-bar>
+
+    <div class="users-content">
+      <div class="page-header">
+        <h1>👥 User Management</h1>
+        <p class="page-subtitle">Manage user accounts, roles, and permissions</p>
       </div>
 
-      <button class="btn btn-outline-secondary" (click)="toggleFilters()">
-        <i class="bi bi-funnel"></i>
-        Filters
-      </button>
-    </div>
-
-    <div class="advanced-filters" *ngIf="showFilters">
-      <div class="filter-grid">
-        <div class="filter-item">
-          <label class="filter-label">Role</label>
-          <select [(ngModel)]="roleFilter" (ngModelChange)="onFilterChange()" class="form-select">
-            <option value="">All Roles</option>
-            <option value="ADMIN">Admin</option>
-            <option value="HR">HR</option>
-            <option value="MANAGER">Manager</option>
-            <option value="EMPLOYEE">Employee</option>
-          </select>
+      <!-- Statistics Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: #e3f2fd;">👥</div>
+          <div class="stat-info">
+            <h3>{{ pagination.total || 0 }}</h3>
+            <p>Total Users</p>
+          </div>
         </div>
 
-        <div class="filter-item">
-          <label class="filter-label">Profile Status</label>
-          <select [(ngModel)]="profileFilter" (ngModelChange)="onFilterChange()" class="form-select">
-            <option value="">All Users</option>
-            <option value="true">With Profile</option>
-            <option value="false">Without Profile</option>
-          </select>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: #e8f5e8;">✅</div>
+          <div class="stat-info">
+            <h3>{{ getActiveUsersCount() }}</h3>
+            <p>Active Users</p>
+          </div>
         </div>
 
-        <div class="filter-item filter-actions">
-          <button class="btn btn-secondary w-100" (click)="clearFilters()">
-            Clear Filters
+        <div class="stat-card">
+          <div class="stat-icon" style="background: #fff3e0;">⏸️</div>
+          <div class="stat-info">
+            <h3>{{ getInactiveUsersCount() }}</h3>
+            <p>Inactive Users</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: #f3e5f5;">📋</div>
+          <div class="stat-info">
+            <h3>{{ getUsersWithProfileCount() }}</h3>
+            <p>Complete Profiles</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search and Filter Section -->
+      <div class="filter-section">
+        <div class="filter-header">
+          <div class="search-wrapper">
+            <i class="bi bi-search search-icon"></i>
+            <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onSearch()" class="search-input"
+              placeholder="Search by name, email, or username..." />
+          </div>
+
+          <button class="filter-toggle-btn" (click)="toggleFilters()">
+            <i class="bi bi-funnel"></i>
+            {{ showFilters ? 'Hide' : 'Show' }} Filters
           </button>
         </div>
+
+        <div class="advanced-filters" *ngIf="showFilters">
+          <div class="filter-grid">
+            <div class="filter-item">
+              <label class="filter-label">
+                <i class="bi bi-shield"></i>
+                Role
+              </label>
+              <select [(ngModel)]="roleFilter" (ngModelChange)="onFilterChange()" class="form-select">
+                <option value="">All Roles</option>
+                <option value="ADMIN">Admin</option>
+                <option value="HR">HR</option>
+                <option value="MANAGER">Manager</option>
+                <option value="EMPLOYEE">Employee</option>
+              </select>
+            </div>
+
+            <div class="filter-item">
+              <label class="filter-label">
+                <i class="bi bi-person-check"></i>
+                Profile Status
+              </label>
+              <select [(ngModel)]="profileFilter" (ngModelChange)="onFilterChange()" class="form-select">
+                <option value="">All Users</option>
+                <option value="true">With Profile</option>
+                <option value="false">Without Profile</option>
+              </select>
+            </div>
+
+            <div class="filter-item filter-actions">
+              <button class="btn-clear-filters" (click)="clearFilters()">
+                <i class="bi bi-x-circle"></i>
+                Clear Filters
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <div class="table-card">
-    <!-- Loading State -->
-    <div *ngIf="loading" class="loading-container">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-    </div>
+      <!-- Users Table -->
+      <div class="table-section">
+        <div class="section-header">
+          <h2>
+            <i class="bi bi-people"></i>
+            User Directory
+          </h2>
+          <span class="result-count">{{ pagination.total || 0 }} users found</span>
+        </div>
 
-    <div *ngIf="!loading && users.length === 0" class="empty-state">
-      <i class="bi bi-people empty-icon"></i>
-      <p class="empty-text">No users found</p>
-    </div>
+        <!-- Loading State -->
+        <div *ngIf="loading" class="loading-container">
+          <div class="spinner"></div>
+          <p>Loading users...</p>
+        </div>
 
-    <div *ngIf="!loading && users.length > 0" class="table-responsive">
-      <table class="table table-hover">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Contact</th>
-            <th>Roles</th>
-            <th>Status</th>
-            <th>Profile</th>
-            <th class="text-end">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let user of users">
-            <td>
-              <div class="user-info">
-                <div class="user-avatar">
-                  <img *ngIf="user.profilePictureUrl" [src]="user.profilePictureUrl" [alt]="user.fullname"
-                    class="avatar-img" />
-                  <div *ngIf="!user.profilePictureUrl" class="avatar-placeholder">
-                    {{ getInitials(user.fullname) }}
+        <!-- Empty State -->
+        <div *ngIf="!loading && users.length === 0" class="empty-state">
+          <div class="empty-icon">👤</div>
+          <h3>No users found</h3>
+          <p>Try adjusting your search or filter criteria</p>
+        </div>
+
+        <!-- Users Table -->
+        <div *ngIf="!loading && users.length > 0" class="users-table-wrapper">
+          <table class="users-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Contact</th>
+                <th>Roles</th>
+                <th>Status</th>
+                <th>Profile</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let user of users" class="user-row">
+                <td>
+                  <div class="user-info">
+                    <div class="user-avatar">
+                      <img *ngIf="user.profilePictureUrl" [src]="user.profilePictureUrl" [alt]="user.fullname"
+                        class="avatar-img" />
+                      <div *ngIf="!user.profilePictureUrl" class="avatar-placeholder">
+                        {{ getInitials(user.fullname) }}
+                      </div>
+                    </div>
+                    <div class="user-details">
+                      <div class="user-name">{{ user.fullname }}</div>
+                      <div class="user-username">@{{ user.username }}</div>
+                    </div>
                   </div>
-                </div>
-                <div class="user-details">
-                  <div class="user-name">{{ user.fullname }}</div>
-                  <div class="user-username">@{{ user.username }}</div>
-                </div>
-              </div>
-            </td>
+                </td>
 
-            <td>
-              <div class="contact-info">
-                <div class="contact-email">{{ user.email }}</div>
-                <div *ngIf="user.phoneNumber" class="contact-phone">
-                  {{ user.phoneNumber }}
-                </div>
-              </div>
-            </td>
+                <td>
+                  <div class="contact-info">
+                    <div class="contact-email">
+                      <i class="bi bi-envelope"></i>
+                      {{ user.email }}
+                    </div>
+                    <div *ngIf="user.phoneNumber" class="contact-phone">
+                      <i class="bi bi-telephone"></i>
+                      {{ user.phoneNumber }}
+                    </div>
+                  </div>
+                </td>
 
-            <td>
-              <div class="roles-container">
-                <span *ngFor="let role of user.roles" class="badge" [ngClass]="getRoleBadgeClass(role)">
-                  {{ role }}
-                </span>
-              </div>
-            </td>
+                <td>
+                  <div class="roles-container">
+                    <span *ngFor="let role of user.roles" class="role-badge" [ngClass]="getRoleBadgeClass(role)">
+                      {{ role }}
+                    </span>
+                  </div>
+                </td>
 
-            <td>
-              <span class="badge" [ngClass]="user.isActive ? 'badge-success' : 'badge-danger'">
-                {{ user.isActive ? 'Active' : 'Inactive' }}
-              </span>
-            </td>
+                <td>
+                  <span class="status-badge" [ngClass]="user.isActive ? 'status-active' : 'status-inactive'">
+                    <i class="bi" [ngClass]="user.isActive ? 'bi-check-circle' : 'bi-x-circle'"></i>
+                    {{ user.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
 
-            <td>
-              <span class="badge" [ngClass]="user.hasProfile ? 'badge-primary' : 'badge-warning'">
-                {{ user.hasProfile ? 'Complete' : 'Pending' }}
-              </span>
-            </td>
+                <td>
+                  <span class="profile-badge" [ngClass]="user.hasProfile ? 'profile-complete' : 'profile-pending'">
+                    <i class="bi" [ngClass]="user.hasProfile ? 'bi-check-circle-fill' : 'bi-exclamation-circle'"></i>
+                    {{ user.hasProfile ? 'Complete' : 'Pending' }}
+                  </span>
+                </td>
 
-            <td>
-              <div class="action-buttons">
-                <button *ngIf="!user.hasProfile" class="btn btn-sm btn-success" (click)="openCreateProfileModal(user)"
-                  title="Create Profile">
-                  <i class="bi bi-person-plus"></i>
-                </button>
+                <td>
+                  <div class="action-buttons">
+                    <button *ngIf="!user.hasProfile" class="btn-action btn-create"
+                      (click)="openCreateProfileModal(user)" title="Create Profile">
+                      <i class="bi bi-person-plus"></i>
+                    </button>
 
-                <button *ngIf="user.isActive" class="btn btn-sm btn-danger" (click)="activateUser(user.id, false)"
-                  title="Deactivate">
-                  <i class="bi bi-person-x"></i>
-                </button>
-                <button *ngIf="!user.isActive" class="btn btn-sm btn-success" (click)="activateUser(user.id, true)"
-                  title="Activate">
-                  <i class="bi bi-person-check"></i>
-                </button>
+                    <button *ngIf="user.isActive" class="btn-action btn-deactivate"
+                      (click)="activateUser(user.id, false)" title="Deactivate User">
+                      <i class="bi bi-person-x"></i>
+                    </button>
 
-                <button class="btn btn-sm btn-primary" (click)="openRoleModal(user)" title="Edit Roles">
-                  <i class="bi bi-shield"></i>
-                </button>
+                    <button *ngIf="!user.isActive" class="btn-action btn-activate" (click)="activateUser(user.id, true)"
+                      title="Activate User">
+                      <i class="bi bi-person-check"></i>
+                    </button>
 
-                <!-- Delete -->
-                <button class="btn btn-sm btn-danger" (click)="openDeleteModal(user)" title="Delete">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+                    <button class="btn-action btn-roles" (click)="openRoleModal(user)" title="Edit Roles">
+                      <i class="bi bi-shield"></i>
+                    </button>
 
-    <div *ngIf="!loading && users.length > 0" class="pagination-container">
-      <div class="pagination-info">
-        Showing
-        <strong>{{ (pagination.page - 1) * pagination.limit + 1 }}</strong>
-        to
-        <strong>{{ pagination.page * pagination.limit > pagination.total ? pagination.total : pagination.page *
-          pagination.limit }}</strong>
-        of
-        <strong>{{ pagination.total }}</strong>
-        results
-      </div>
+                    <button class="btn-action btn-delete" (click)="openDeleteModal(user)" title="Delete User">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-      <nav aria-label="Page navigation">
-        <ul class="pagination mb-0">
-          <li class="page-item" [class.disabled]="pagination.page === 1">
-            <a class="page-link" (click)="previousPage()" href="javascript:void(0)">
+        <!-- Pagination -->
+        <div *ngIf="!loading && users.length > 0" class="pagination-container">
+          <div class="pagination-info">
+            Showing
+            <strong>{{ ((pagination.page || 1) - 1) * (pagination.limit || 10) + 1 }}</strong>
+            to
+            <strong>{{ Math.min((pagination.page || 1) * (pagination.limit || 10), pagination.total || 0) }}</strong>
+            of
+            <strong>{{ pagination.total || 0 }}</strong>
+            users
+          </div>
+
+          <nav class="pagination-nav">
+            <button class="pagination-btn" [disabled]="(pagination.page || 1) === 1" (click)="previousPage()">
               <i class="bi bi-chevron-left"></i>
-            </a>
-          </li>
+              Previous
+            </button>
 
-          <li *ngFor="let page of getPaginationArray()" class="page-item" [class.active]="pagination.page === page">
-            <a class="page-link" (click)="goToPage(page)" href="javascript:void(0)">
-              {{ page }}
-            </a>
-          </li>
+            <div class="pagination-pages">
+              <button *ngFor="let page of getPaginationArray()" class="pagination-page"
+                [class.active]="(pagination.page || 1) === page" (click)="goToPage(page)">
+                {{ page }}
+              </button>
+            </div>
 
-          <li class="page-item" [class.disabled]="pagination.page === pagination.totalPages">
-            <a class="page-link" (click)="nextPage()" href="javascript:void(0)">
+            <button class="pagination-btn" [disabled]="(pagination.page || 1) === (pagination.totalPages || 1)"
+              (click)="nextPage()">
+              Next
               <i class="bi bi-chevron-right"></i>
-            </a>
-          </li>
-        </ul>
-      </nav>
+            </button>
+          </nav>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- Modals -->
 <app-role-modal *ngIf="showRoleModal && selectedUser" [user]="selectedUser" (close)="closeRoleModal()"
   (success)="fetchUsers(); closeRoleModal()"></app-role-modal>
 
 <app-delete-confirm-modal *ngIf="showDeleteModal && selectedUser" [user]="selectedUser" (close)="closeDeleteModal()"
   (confirm)="deleteUser()"></app-delete-confirm-modal>
 
-<app-create-profile-modal *ngIf="showCreateProfileModal && selectedUser" [userId]="selectedUser!.id"></app-create-profile-modal>
+<app-create-profile-modal *ngIf="showCreateProfileModal && selectedUser" [userId]="selectedUser!.id"
+  (close)="closeCreateProfileModal()" (success)="onProfileCreated()"></app-create-profile-modal>

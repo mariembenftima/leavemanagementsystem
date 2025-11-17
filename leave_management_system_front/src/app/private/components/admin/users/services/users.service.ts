@@ -50,11 +50,26 @@ export interface UpdateUserDto {
 export class UsersService {
   private apiUrl = `${environment.apiUrl}/users`;
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
+  getAllUsers(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    role?: string;
+    hasProfile?: string;
+  }): Observable<UsersResponse> {
+    let httpParams = new HttpParams();
 
-  getAllUsers(params: any): Observable<{ data: User[], pagination: PaginationData }> {
-    return this.http.get<{ data: User[], pagination: PaginationData }>('api-url', { params });
+    if (params) {
+      if (params.page) httpParams = httpParams.set('page', params.page.toString());
+      if (params.limit) httpParams = httpParams.set('limit', params.limit.toString());
+      if (params.search) httpParams = httpParams.set('search', params.search);
+      if (params.role) httpParams = httpParams.set('role', params.role);
+      if (params.hasProfile) httpParams = httpParams.set('hasProfile', params.hasProfile);
+    }
+
+    return this.http.get<UsersResponse>(this.apiUrl, { params: httpParams });
   }
 
 
