@@ -1,0 +1,29 @@
+<div class="modal-backdrop" (click)="onClose()"></div>
+
+<div class="modal-container" (click)="$event.stopPropagation()">
+  <div class="modal-header">
+    <div class="warning-icon">
+      <i class="bi bi-exclamation-triangle"></i>
+    </div>
+    <h3 class="modal-title">Delete User</h3>
+    <button class="close-button" (click)="onClose()">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <p class="warning-message">
+      Are you sure you want to delete <strong>{{ user.fullname }}</strong>?
+      This action cannot be undone.
+    </p>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-secondary" (click)="onClose()">
+      Cancel
+    </button>
+    <button class="btn btn-danger" (click)="onConfirm()">
+      Delete User
+    </button>
+  </div>
+</div>

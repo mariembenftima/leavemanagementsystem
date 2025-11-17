@@ -1,0 +1,201 @@
+<div class="users-container">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">User Management</h1>
+      <p class="page-subtitle">Manage user accounts, roles, and permissions</p>
+    </div>
+  </div>
+
+  <div class="filter-card">
+    <div class="filter-row">
+      <!-- Search -->
+      <div class="search-wrapper">
+        <i class="search-icon bi bi-search"></i>
+        <input type="text" [(ngModel)]="searchQuery" (ngModelChange)="onSearch()" class="search-input"
+          placeholder="Search by name, email, or username..." />
+      </div>
+
+      <button class="btn btn-outline-secondary" (click)="toggleFilters()">
+        <i class="bi bi-funnel"></i>
+        Filters
+      </button>
+    </div>
+
+    <div class="advanced-filters" *ngIf="showFilters">
+      <div class="filter-grid">
+        <div class="filter-item">
+          <label class="filter-label">Role</label>
+          <select [(ngModel)]="roleFilter" (ngModelChange)="onFilterChange()" class="form-select">
+            <option value="">All Roles</option>
+            <option value="ADMIN">Admin</option>
+            <option value="HR">HR</option>
+            <option value="MANAGER">Manager</option>
+            <option value="EMPLOYEE">Employee</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label class="filter-label">Profile Status</label>
+          <select [(ngModel)]="profileFilter" (ngModelChange)="onFilterChange()" class="form-select">
+            <option value="">All Users</option>
+            <option value="true">With Profile</option>
+            <option value="false">Without Profile</option>
+          </select>
+        </div>
+
+        <div class="filter-item filter-actions">
+          <button class="btn btn-secondary w-100" (click)="clearFilters()">
+            Clear Filters
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-container">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <div *ngIf="!loading && users.length === 0" class="empty-state">
+      <i class="bi bi-people empty-icon"></i>
+      <p class="empty-text">No users found</p>
+    </div>
+
+    <div *ngIf="!loading && users.length > 0" class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Contact</th>
+            <th>Roles</th>
+            <th>Status</th>
+            <th>Profile</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of users">
+            <td>
+              <div class="user-info">
+                <div class="user-avatar">
+                  <img *ngIf="user.profilePictureUrl" [src]="user.profilePictureUrl" [alt]="user.fullname"
+                    class="avatar-img" />
+                  <div *ngIf="!user.profilePictureUrl" class="avatar-placeholder">
+                    {{ getInitials(user.fullname) }}
+                  </div>
+                </div>
+                <div class="user-details">
+                  <div class="user-name">{{ user.fullname }}</div>
+                  <div class="user-username">@{{ user.username }}</div>
+                </div>
+              </div>
+            </td>
+
+            <td>
+              <div class="contact-info">
+                <div class="contact-email">{{ user.email }}</div>
+                <div *ngIf="user.phoneNumber" class="contact-phone">
+                  {{ user.phoneNumber }}
+                </div>
+              </div>
+            </td>
+
+            <td>
+              <div class="roles-container">
+                <span *ngFor="let role of user.roles" class="badge" [ngClass]="getRoleBadgeClass(role)">
+                  {{ role }}
+                </span>
+              </div>
+            </td>
+
+            <td>
+              <span class="badge" [ngClass]="user.isActive ? 'badge-success' : 'badge-danger'">
+                {{ user.isActive ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+
+            <td>
+              <span class="badge" [ngClass]="user.hasProfile ? 'badge-primary' : 'badge-warning'">
+                {{ user.hasProfile ? 'Complete' : 'Pending' }}
+              </span>
+            </td>
+
+            <td>
+              <div class="action-buttons">
+                <button *ngIf="!user.hasProfile" class="btn btn-sm btn-success" (click)="openCreateProfileModal(user)"
+                  title="Create Profile">
+                  <i class="bi bi-person-plus"></i>
+                </button>
+
+                <button *ngIf="user.isActive" class="btn btn-sm btn-danger" (click)="activateUser(user.id, false)"
+                  title="Deactivate">
+                  <i class="bi bi-person-x"></i>
+                </button>
+                <button *ngIf="!user.isActive" class="btn btn-sm btn-success" (click)="activateUser(user.id, true)"
+                  title="Activate">
+                  <i class="bi bi-person-check"></i>
+                </button>
+
+                <button class="btn btn-sm btn-primary" (click)="openRoleModal(user)" title="Edit Roles">
+                  <i class="bi bi-shield"></i>
+                </button>
+
+                <!-- Delete -->
+                <button class="btn btn-sm btn-danger" (click)="openDeleteModal(user)" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div *ngIf="!loading && users.length > 0" class="pagination-container">
+      <div class="pagination-info">
+        Showing
+        <strong>{{ (pagination.page - 1) * pagination.limit + 1 }}</strong>
+        to
+        <strong>{{ pagination.page * pagination.limit > pagination.total ? pagination.total : pagination.page *
+          pagination.limit }}</strong>
+        of
+        <strong>{{ pagination.total }}</strong>
+        results
+      </div>
+
+      <nav aria-label="Page navigation">
+        <ul class="pagination mb-0">
+          <li class="page-item" [class.disabled]="pagination.page === 1">
+            <a class="page-link" (click)="previousPage()" href="javascript:void(0)">
+              <i class="bi bi-chevron-left"></i>
+            </a>
+          </li>
+
+          <li *ngFor="let page of getPaginationArray()" class="page-item" [class.active]="pagination.page === page">
+            <a class="page-link" (click)="goToPage(page)" href="javascript:void(0)">
+              {{ page }}
+            </a>
+          </li>
+
+          <li class="page-item" [class.disabled]="pagination.page === pagination.totalPages">
+            <a class="page-link" (click)="nextPage()" href="javascript:void(0)">
+              <i class="bi bi-chevron-right"></i>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<app-role-modal *ngIf="showRoleModal && selectedUser" [user]="selectedUser" (close)="closeRoleModal()"
+  (success)="fetchUsers(); closeRoleModal()"></app-role-modal>
+
+<app-delete-confirm-modal *ngIf="showDeleteModal && selectedUser" [user]="selectedUser" (close)="closeDeleteModal()"
+  (confirm)="deleteUser()"></app-delete-confirm-modal>
+
+<app-create-profile-modal *ngIf="showCreateProfileModal && selectedUser" [userId]="selectedUser!.id"></app-create-profile-modal>

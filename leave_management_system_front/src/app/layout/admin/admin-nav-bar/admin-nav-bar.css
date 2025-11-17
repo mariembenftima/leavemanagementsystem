@@ -58,13 +58,11 @@
   gap: 8px;
 }
 
-/* Dropdown Container */
 .dropdown-container {
   position: relative;
   display: inline-block;
 }
 
-/* Action Buttons */
 .action-btn {
   position: relative;
   width: 40px;

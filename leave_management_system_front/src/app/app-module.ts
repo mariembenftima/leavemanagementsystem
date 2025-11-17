@@ -24,9 +24,15 @@ import { LeaveAnalytics } from './private/components/analytics/leave-analytics/l
 import { ToastContainerComponent } from './shared/components/toast-container/toast-container';
 import { ApiService } from './private/services/api.service';
 import { AuthService } from './private/services/auth.service';
-import { ToastService } from './shared/services/toast.service';
 import { BaseChartDirective } from 'ng2-charts';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
+import { UsersComponent } from './private/components/admin/users/users.component';
+import { CreateProfileModalComponent } from './private/components/admin/users/users/modals/create-profile-modal/create-profile-modal.component';
+import { DeleteConfirmModalComponent } from './private/components/admin/users/users/modals/delete-confirm-modal/delete-confirm-modal.component';
+import { RoleModalComponent } from './private/components/admin/users/users/modals/role-modal/role-modal.component';
+import { CommonModule } from '@angular/common';
+import { ADMIN_ROUTES } from './private/components/admin/admin.route';
+
 
 @NgModule({
   declarations: [
@@ -45,6 +51,10 @@ import { AuthInterceptor } from './interceptors/auth.interceptor';
     LeaveAnalytics,
     ToastContainerComponent,
     UserDashboard,
+    RoleModalComponent,
+    DeleteConfirmModalComponent,
+    CreateProfileModalComponent,
+    UsersComponent
   ],
   imports: [
     RouterModule,
@@ -56,6 +66,10 @@ import { AuthInterceptor } from './interceptors/auth.interceptor';
     HttpClientModule,
     BaseChartDirective,
     RegisterComponent,
+    FormsModule,
+    CommonModule,
+    RouterModule.forRoot(ADMIN_ROUTES)
+    
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),

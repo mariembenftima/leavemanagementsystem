@@ -1,0 +1,284 @@
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1040;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.modal-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  max-width: 700px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  z-index: 1050;
+  animation: slideIn 0.3s ease-out;
+}
+
+.modal-container .modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.modal-container .modal-header .modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.25rem 0;
+}
+
+.modal-container .modal-header .modal-subtitle {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.modal-container .modal-header .close-button {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  transition: color 0.2s;
+}
+
+.modal-container .modal-header .close-button:hover {
+  color: #1f2937;
+}
+
+.modal-container .modal-body {
+  padding: 1.5rem;
+}
+
+.modal-container .modal-body .profile-picture-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-container .modal-body .profile-picture-section .avatar-preview {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.modal-container .modal-body .profile-picture-section .avatar-preview .avatar-img {
+  width: 8rem;
+  height: 8rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid #e5e7eb;
+}
+
+.modal-container .modal-body .profile-picture-section .avatar-preview .avatar-placeholder {
+  width: 8rem;
+  height: 8rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 3rem;
+  font-weight: 600;
+  border: 4px solid #e5e7eb;
+}
+
+.modal-container .modal-body .profile-picture-section .avatar-preview .remove-avatar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.modal-container .modal-body .profile-picture-section .avatar-preview .remove-avatar:hover {
+  background-color: #b91c1c;
+}
+
+.modal-container .modal-body .profile-picture-section .upload-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  background-color: #eff6ff;
+  color: #3b82f6;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.modal-container .modal-body .profile-picture-section .upload-button:hover {
+  background-color: #dbeafe;
+}
+
+.modal-container .modal-body .profile-picture-section .upload-button .file-input {
+  display: none;
+}
+
+.modal-container .modal-body .profile-picture-section .upload-hint {
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin: 0.5rem 0 0 0;
+}
+
+.modal-container .modal-body .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.modal-container .modal-body .form-group .form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.modal-container .modal-body .form-group .form-label .required {
+  color: #dc2626;
+}
+
+.modal-container .modal-body .form-group .input-with-icon {
+  position: relative;
+}
+
+.modal-container .modal-body .form-group .input-with-icon i {
+  position: absolute;
+  left: 1rem;
+  top: 0.75rem;
+  color: #9ca3af;
+  font-size: 1rem;
+}
+
+.modal-container .modal-body .form-group .input-with-icon .form-control {
+  width: 100%;
+  padding: 0.625rem 1rem 0.625rem 2.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.modal-container .modal-body .form-group .input-with-icon .form-control:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.modal-container .modal-body .form-group .input-with-icon .form-control.textarea {
+  resize: vertical;
+  min-height: 100px;
+  padding-top: 0.75rem;
+}
+
+.modal-container .modal-footer {
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.modal-container .modal-footer .btn {
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+}
+
+.modal-container .modal-footer .btn.btn-secondary {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.modal-container .modal-footer .btn.btn-secondary:hover:not(:disabled) {
+  background-color: #e5e7eb;
+}
+
+.modal-container .modal-footer .btn.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+}
+
+.modal-container .modal-footer .btn.btn-primary:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.modal-container .modal-footer .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-container {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .modal-container .modal-body {
+    padding: 1rem;
+  }
+
+  .modal-container .modal-body .profile-picture-section .avatar-preview .avatar-img,
+  .modal-container .modal-body .profile-picture-section .avatar-preview .avatar-placeholder {
+    width: 6rem;
+    height: 6rem;
+    font-size: 2rem;
+  }
+
+  .modal-container .modal-footer {
+    flex-direction: column;
+  }
+
+  .modal-container .modal-footer .btn {
+    width: 100%;
+  }
+}

@@ -1,15 +1,15 @@
 import { Team } from "./team.model";
 
 export interface User {
-  id: string;                    // UUID
+  id: string;                    
   username: string;
   fullname: string;
   email: string;
   phoneNumber?: string;
-  password?: string;             // optional for frontend
+  password?: string;             
   isActive: boolean;
   lastLogin?: string;
-  roles: string[];               // ['EMPLOYEE', 'HR', 'ADMIN']
+  roles: string[];             
   profilePictureUrl?: string;
   bio?: string;
   address?: string;
@@ -17,4 +17,5 @@ export interface User {
   team?: Team | null;
   createdAt: string;
   updatedAt: string;
+  hasProfile: boolean;
 }

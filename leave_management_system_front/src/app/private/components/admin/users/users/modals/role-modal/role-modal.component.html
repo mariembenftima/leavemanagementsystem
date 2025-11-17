@@ -1,0 +1,50 @@
+<div class="modal-backdrop" (click)="onClose()"></div>
+
+<div class="modal-container" (click)="$event.stopPropagation()">
+  <div class="modal-header">
+    <h3 class="modal-title">Edit User Roles</h3>
+    <button class="close-button" (click)="onClose()">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <p class="user-info">
+      User: <strong>{{ user.fullname }}</strong>
+    </p>
+
+    <div class="roles-list">
+      <div *ngFor="let role of availableRoles" class="role-item">
+        <label class="role-checkbox">
+          <input
+            type="checkbox"
+            [checked]="isRoleSelected(role.value)"
+            (change)="toggleRole(role.value)"
+          />
+          <span class="role-label">{{ role.label }}</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button
+      class="btn btn-secondary"
+      (click)="onClose()"
+      [disabled]="loading"
+    >
+      Cancel
+    </button>
+    <button
+      class="btn btn-primary"
+      (click)="onSave()"
+      [disabled]="loading"
+    >
+      <span *ngIf="!loading">Save Changes</span>
+      <span *ngIf="loading">
+        <span class="spinner-border spinner-border-sm me-2"></span>
+        Saving...
+      </span>
+    </button>
+  </div>
+</div>

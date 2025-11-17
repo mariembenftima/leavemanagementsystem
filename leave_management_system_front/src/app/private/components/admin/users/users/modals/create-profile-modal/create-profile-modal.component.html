@@ -1,0 +1,173 @@
+<div class="modal-backdrop" (click)="onClose()"></div>
+
+<div class="modal-container" (click)="$event.stopPropagation()">
+  <div class="modal-header">
+    <div>
+      <h3 class="modal-title">Create User Profile</h3>
+      <p class="modal-subtitle">Complete the user's profile information</p>
+    </div>
+    <button class="close-button" (click)="onClose()">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="modal-body">
+    <form (ngSubmit)="onSubmit()">
+      <!-- Profile Picture Upload -->
+      <div class="profile-picture-section">
+        <div class="avatar-preview">
+          <img
+            *ngIf="previewUrl"
+            [src]="previewUrl"
+            alt="Profile preview"
+            class="avatar-img"
+          />
+          <div *ngIf="!previewUrl" class="avatar-placeholder">
+            {{ getInitials() }}
+          </div>
+          <button
+            *ngIf="previewUrl"
+            type="button"
+            class="remove-avatar"
+            (click)="removeProfilePicture()"
+          >
+            <i class="bi bi-x"></i>
+          </button>
+        </div>
+
+        <label class="upload-button">
+          <input
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            (change)="onFileSelected($event)"
+            class="file-input"
+          />
+          <i class="bi bi-upload"></i>
+          <span>Upload Profile Picture</span>
+        </label>
+        <p class="upload-hint">JPG, PNG, or WEBP. Max 5MB</p>
+      </div>
+
+      <!-- Form Fields -->
+      <div class="form-grid">
+        <!-- Full Name -->
+        <div class="form-group">
+          <label class="form-label">
+            Full Name <span class="required">*</span>
+          </label>
+          <div class="input-with-icon">
+            <i class="bi bi-person"></i>
+            <input
+              type="text"
+              [(ngModel)]="formData.fullname"
+              name="fullname"
+              class="form-control"
+              placeholder="John Doe"
+              required
+            />
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="form-group">
+          <label class="form-label">
+            Email <span class="required">*</span>
+          </label>
+          <div class="input-with-icon">
+            <i class="bi bi-envelope"></i>
+            <input
+              type="email"
+              [(ngModel)]="formData.email"
+              name="email"
+              class="form-control"
+              placeholder="john@example.com"
+              required
+            />
+          </div>
+        </div>
+
+        <!-- Phone Number -->
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <div class="input-with-icon">
+            <i class="bi bi-telephone"></i>
+            <input
+              type="tel"
+              [(ngModel)]="formData.phoneNumber"
+              name="phoneNumber"
+              class="form-control"
+              placeholder="+1 (555) 123-4567"
+            />
+          </div>
+        </div>
+
+        <!-- Date of Birth -->
+        <div class="form-group">
+          <label class="form-label">Date of Birth</label>
+          <div class="input-with-icon">
+            <i class="bi bi-calendar"></i>
+            <input
+              type="date"
+              [(ngModel)]="formData.dateOfBirth"
+              name="dateOfBirth"
+              class="form-control"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Address -->
+      <div class="form-group">
+        <label class="form-label">Address</label>
+        <div class="input-with-icon">
+          <i class="bi bi-geo-alt"></i>
+          <input
+            type="text"
+            [(ngModel)]="formData.address"
+            name="address"
+            class="form-control"
+            placeholder="123 Main St, City, State, ZIP"
+          />
+        </div>
+      </div>
+
+      <!-- Bio -->
+      <div class="form-group">
+        <label class="form-label">Bio</label>
+        <div class="input-with-icon">
+          <i class="bi bi-briefcase"></i>
+          <textarea
+            [(ngModel)]="formData.bio"
+            name="bio"
+            class="form-control textarea"
+            rows="4"
+            placeholder="Tell us about yourself..."
+          ></textarea>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="modal-footer">
+    <button
+      type="button"
+      class="btn btn-secondary"
+      (click)="onClose()"
+      [disabled]="loading"
+    >
+      Cancel
+    </button>
+    <button
+      type="submit"
+      class="btn btn-primary"
+      (click)="onSubmit()"
+      [disabled]="loading"
+    >
+      <span *ngIf="!loading">Create Profile</span>
+      <span *ngIf="loading">
+        <span class="spinner-border spinner-border-sm me-2"></span>
+        Creating Profile...
+      </span>
+    </button>
+  </div>
+</div>

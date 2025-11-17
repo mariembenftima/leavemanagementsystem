@@ -12,10 +12,10 @@ import { LeaveRequestComponent } from './private/components/users/leave-requests
 import { UserApproves } from './private/components/users/approves/user-approves';
 // Analytics Components
 import { LeaveAnalytics } from './private/components/analytics/leave-analytics/leave-analytics';
-// Admin Components
-import { AdminDashboard } from './private/components/admin/dashboard/admin-dashboard';
 // Guards
 import { AuthGuard, RoleGuard } from './guards/auth.guard';
+import { UsersComponent } from './private/components/admin/users/users.component';
+import { AdminDashboard } from './private/components/admin/dashboard/admin-dashboard';
 
 const routes: Routes = [
   { path: 'login', component: login },
@@ -26,10 +26,42 @@ const routes: Routes = [
   { path: 'leaverequests', component: LeaveRequestComponent, canActivate: [AuthGuard] },
   { path: 'analytics', component: LeaveAnalytics, canActivate: [AuthGuard] },
   { path: 'approves', component: UserApproves, canActivate: [RoleGuard], data: { roles: ['ADMIN', 'HR_MANAGER'] } },
-  { path: 'admin/dashboard', component: AdminDashboard, canActivate: [RoleGuard], data: { roles: ['ADMIN'] } },
+  
+  { 
+    path: 'admin', 
+    canActivate: [RoleGuard], 
+    data: { roles: ['ADMIN', 'HR'] },
+    children: [
+      {
+          path: '',
+          redirectTo: 'dashboard',
+          pathMatch: 'full'
+        },
+        {
+          path: 'dashboard',
+          component:AdminDashboard
+        },
+        {
+          path: 'users',
+          children: [
+            {
+              path: '',
+              redirectTo: 'users',
+              pathMatch: 'full'
+            },
+            {
+              path: 'users',
+              component: UsersComponent
+            }
+          ]
+        },
+    ]
+  },
+  
   { path: 'settings', redirectTo: '/profile', pathMatch: 'full' },
   { path: 'help', redirectTo: '/dashboard', pathMatch: 'full' },
   { path: '', component: LandingPage },
+  { path: '**', redirectTo: '', pathMatch: 'full' }
 ];
 
 @NgModule({

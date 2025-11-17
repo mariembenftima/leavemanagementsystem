@@ -24,7 +24,7 @@ interface SettingsItem {
 
 @Component({
   selector: 'app-admin-nav-bar',
-  standalone: false,
+  standalone: false,  // ✅ Changed to false
   templateUrl: './admin-nav-bar.html',
   styleUrls: ['./admin-nav-bar.css'],
 })
@@ -37,7 +37,6 @@ export class AdminNavBar {
     { label: 'System Settings', route: '/admin/settings' },
   ];
 
-  // Admin user data
   currentUser = {
     name: 'Admin',
     email: 'admin@company.com',
@@ -45,7 +44,6 @@ export class AdminNavBar {
     role: 'System Administrator',
   };
 
-  // Notifications
   notifications: Notification[] = [
     {
       id: '1',
@@ -56,7 +54,7 @@ export class AdminNavBar {
       read: false
     },
     {
-      id: '2', 
+      id: '2',
       title: 'System Update',
       message: 'Leave management system updated successfully',
       type: 'success',
@@ -73,7 +71,6 @@ export class AdminNavBar {
     }
   ];
 
-  // Settings menu items
   settingsItems: SettingsItem[] = [
     { label: 'Account Settings', icon: '⚙️', action: 'account' },
     { label: 'System Preferences', icon: '🛠️', action: 'preferences' },
@@ -83,12 +80,11 @@ export class AdminNavBar {
     { label: 'Help & Support', icon: '❓', action: 'help' }
   ];
 
-  // UI State
   showNotificationDropdown = false;
   showSettingsDropdown = false;
   showUserDropdown = false;
 
-  constructor(private router: Router) {}
+  constructor(private router: Router) { }
 
   navigateTo(route: string): void {
     this.navItems.forEach(item => item.active = false);
@@ -101,9 +97,7 @@ export class AdminNavBar {
     return this.router.url === route;
   }
 
-  // Notification methods
   toggleNotifications(): void {
-    console.log('Notifications toggle clicked');
     this.showNotificationDropdown = !this.showNotificationDropdown;
     this.showSettingsDropdown = false;
     this.showUserDropdown = false;
@@ -128,9 +122,7 @@ export class AdminNavBar {
     return this.notifications.filter(n => !n.read).length;
   }
 
-  // Settings methods
   toggleSettings(): void {
-    console.log('Settings toggle clicked');
     this.showSettingsDropdown = !this.showSettingsDropdown;
     this.showNotificationDropdown = false;
     this.showUserDropdown = false;
@@ -138,7 +130,7 @@ export class AdminNavBar {
 
   handleSettingsAction(action: string): void {
     this.showSettingsDropdown = false;
-    
+
     switch (action) {
       case 'account':
         this.router.navigate(['/admin/account']);
@@ -163,7 +155,6 @@ export class AdminNavBar {
     }
   }
 
-  // User menu methods  
   toggleUserMenu(): void {
     this.showUserDropdown = !this.showUserDropdown;
     this.showNotificationDropdown = false;
@@ -171,23 +162,19 @@ export class AdminNavBar {
   }
 
   showHelp(): void {
-    console.log('Help button clicked');
-    // Open help documentation or support page
     window.open('/help', '_blank');
   }
 
   logout(): void {
-    // Clear any stored auth tokens/data
     localStorage.clear();
     sessionStorage.clear();
     this.router.navigate(['/login']);
   }
 
-  // Utility methods
   formatTime(date: Date): string {
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
+
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
@@ -204,7 +191,6 @@ export class AdminNavBar {
     }
   }
 
-  // Close dropdowns when clicking outside
   closeDropdowns(): void {
     this.showNotificationDropdown = false;
     this.showSettingsDropdown = false;
