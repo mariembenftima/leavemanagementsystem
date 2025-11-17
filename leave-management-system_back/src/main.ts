@@ -48,7 +48,7 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, documentFactory);
 
-  await app.listen(3001, '0.0.0.0');
+  await app.listen(3001);
   console.log('🚀 Backend server is running on http://localhost:3001');
   console.log(
     '🚀 Swagger documentation available at http://localhost:3001/api',

@@ -88,10 +88,15 @@ export class LeaveRequestsService {
   }
 
   async getAllLeaveRequests(): Promise<LeaveRequest[]> {
-    return this.leaveRequestRepository.find({
-      relations: ['user', 'leaveType'],
-      order: { createdAt: 'DESC' },
-    });
+    try {
+      return await this.leaveRequestRepository.find({
+        relations: ['user', 'leaveType'], // ✅ This was incomplete
+        order: { createdAt: 'DESC' },
+      });
+    } catch (error) {
+      console.error('❌ Error in getAllLeaveRequests:', error);
+      throw new Error(`Failed to fetch leave requests: ${error.message}`);
+    }
   }
 
   async getPendingLeaveRequests(): Promise<LeaveRequest[]> {
