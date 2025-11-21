@@ -3,6 +3,24 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { UpdateUserDto, UsersService } from '../../../services/users.service';
 
+export interface CreateEmployeeProfileDto {
+  employeeId: string;
+  department: string;
+  designation: string;
+  joinDate: string;
+  gender: string;
+  dateOfBirth?: string;
+  phone?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  address?: string;
+  maritalStatus?: string;
+  nationality?: string;
+  salary?: number;
+  bankAccountNumber?: string;
+  bankName?: string;
+}
+
 @Component({
   selector: 'app-create-profile-modal',
   standalone: false,
@@ -18,14 +36,27 @@ export class CreateProfileModalComponent {
   profilePicture: File | null = null;
   previewUrl: string | null = null;
 
-  formData: UpdateUserDto = {
-    fullname: '',
-    email: '',
-    phoneNumber: '',
-    address: '',
+  formData: CreateEmployeeProfileDto = {
+    employeeId: '',
+    department: '',
+    designation: '',
+    joinDate: '',
+    gender: '',
     dateOfBirth: '',
-    bio: ''
+    phone: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    address: '',
+    maritalStatus: '',
+    nationality: '',
+    salary: undefined,
+    bankAccountNumber: '',
+    bankName: ''
   };
+
+  // Dropdown options
+  genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
+  maritalStatusOptions = ['Single', 'Married', 'Divorced', 'Widowed'];
 
   constructor(private usersService: UsersService) {}
 
@@ -65,14 +96,16 @@ export class CreateProfileModalComponent {
   }
 
   onSubmit(): void {
-    if (!this.formData.fullname || !this.formData.email) {
-      alert('Full name and email are required');
+    // Validate required fields
+    if (!this.formData.employeeId || !this.formData.department || 
+        !this.formData.designation || !this.formData.joinDate || !this.formData.gender) {
+      alert('Employee ID, Department, Designation, Join Date, and Gender are required');
       return;
     }
 
     this.loading = true;
 
-    this.usersService.updateUser(this.userId, this.formData).subscribe({
+    this.usersService.createEmployeeProfile(this.userId, this.formData).subscribe({
       next: () => {
         if (this.profilePicture) {
           this.uploadProfilePicture();
@@ -107,12 +140,12 @@ export class CreateProfileModalComponent {
   }
 
   private onSuccessComplete(): void {
-    alert('Profile created successfully');
+    alert('Employee profile created successfully');
     this.loading = false;
     this.success.emit();
   }
 
   getInitials(): string {
-    return this.formData.fullname ? this.formData.fullname.charAt(0).toUpperCase() : 'U';
+    return this.formData.employeeId ? this.formData.employeeId.substring(0, 2).toUpperCase() : 'EP';
   }
 }

@@ -6,6 +6,8 @@ import {
   NotFoundException,
   UnauthorizedException,
   Param,
+  Post,
+  Body,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -21,8 +23,10 @@ import { Performance } from './entities/performance.entity';
 import { User } from '../users/entities/users.entity';
 import { Activity } from './entities/activity.entity';
 import { LeaveBalancesService } from 'src/leave-balances/leave-balances.service';
+import { CreateProfileDto } from './types/dtos/create-profile.dto';
+import { UserRole } from 'src/users/types/enums/user-role.enum';
+import { TeamEntity } from 'src/teams/entities/team.entity';
 
-// Definition of the leave balance structure that matches what the service returns
 interface LeaveBalanceItem {
   total: number;
   used: number;
@@ -33,7 +37,6 @@ interface LeaveBalanceRecord {
   [key: string]: LeaveBalanceItem;
 }
 
-// Activity summary structure
 interface ActivitySummary {
   id: number;
   type: string;
@@ -72,12 +75,26 @@ export class ProfileController {
     userId: string;
     email: string;
     roles: string[];
-  }): Partial<User> {
+  }): User {
+    if (!authenticatedUser.userId) {
+      throw new UnauthorizedException('User ID is required');
+    }
+
     return {
       id: authenticatedUser.userId,
       email: authenticatedUser.email,
       roles: authenticatedUser.roles,
-    } as Partial<User>;
+      username: '',
+      fullname: '',
+      phoneNumber: '',
+      password: '',
+      isActive: false,
+      teamId: 0,
+      team: new TeamEntity(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      leaveBalances: [],
+    };
   }
 
   // Helper method to convert Activity to ActivitySummary
@@ -156,7 +173,7 @@ export class ProfileController {
       // Get profile data
       profileData = await this.profileService.getProfile(
         user.userId,
-        this.toUserEntity(user) as User,
+        this.toUserEntity(user),
       );
 
       // Get leave balance data
@@ -331,7 +348,7 @@ export class ProfileController {
     try {
       const profile = await this.profileService.getProfile(
         user.userId,
-        this.toUserEntity(user) as User,
+        this.toUserEntity(user),
       );
 
       if (!profile) {
@@ -370,7 +387,7 @@ export class ProfileController {
 
     const profile = await this.profileService.getProfile(
       userId,
-      this.toUserEntity(requester) as User,
+      this.toUserEntity(requester),
     );
 
     if (!profile) {
@@ -384,7 +401,6 @@ export class ProfileController {
     };
   }
 
-  // Helper method to generate a title from activity type
   private getActivityTitle(activityType: string): string {
     switch (activityType) {
       case 'leave_applied':
@@ -406,5 +422,35 @@ export class ProfileController {
       default:
         return 'Activity';
     }
+  }
+  @Post(':userId/employee-profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create employee profile for a user' })
+  async createEmployeeProfile(
+    @Param('userId') userId: string,
+    @Body() createProfileDto: CreateProfileDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const requester = req.user;
+
+    const userIdFromRequest = requester.id;
+
+    if (!requester || !requester.roles.includes(UserRole.HR)) {
+      throw new UnauthorizedException('Only HR can create profiles');
+    }
+
+    // Proceed with the service call using userIdFromRequest
+    const profile = await this.profileService.createProfile(
+      userIdFromRequest,
+      createProfileDto,
+      this.toUserEntity(requester),
+    );
+
+    return {
+      success: true,
+      data: profile,
+      message: 'Employee profile created successfully',
+    };
   }
 }

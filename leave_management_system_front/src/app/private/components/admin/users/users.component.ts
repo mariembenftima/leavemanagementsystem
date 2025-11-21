@@ -233,12 +233,11 @@ export class UsersComponent implements OnInit {
   }
 
   getPaginationArray(): number[] {
-    const maxPages = 5; // Show max 5 page numbers
+    const maxPages = 5;
     const currentPage = this.pagination?.page || 1;
     const totalPages = this.pagination?.totalPages || 1;
     
     if (totalPages <= maxPages) {
-      // If total pages is less than max, show all pages
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
     

@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../../../../environments/environment.development';
 import { User } from '../../../../../types/user.model';
+import { CreateEmployeeProfileDto } from '../users/modals/create-profile-modal/create-profile-modal.component';
 
 
 export interface PaginationData {
@@ -111,4 +112,20 @@ export class UsersService {
 
     return this.http.post(`${this.apiUrl}/${id}/profile-pic`, formData);
   }
+  createEmployeeProfile(userId: string, data: CreateEmployeeProfileDto): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${userId}/employee-profile`, data);
+  }
+
+  getEmployeeProfile(userId: string): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/${userId}/employee-profile`);
+  }
+
+  updateEmployeeProfile(userId: string, data: Partial<CreateEmployeeProfileDto>): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/${userId}/employee-profile`, data);
+  }
+
+  deleteEmployeeProfile(userId: string): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/${userId}/employee-profile`);
+  }
+  
 }
