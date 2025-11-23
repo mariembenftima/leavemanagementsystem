@@ -10,6 +10,8 @@ import {
   Request,
   Query,
   ForbiddenException,
+  Patch,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -27,6 +29,7 @@ import { extname } from 'path';
 import { Express } from 'express';
 import { AuthenticatedRequest } from './types/authenticated-request';
 import { LoginDto } from './types/dtos/login.dto';
+import { ChangePasswordDto } from './types/dtos/change-password.dto';
 
 @ApiTags('authentication')
 @Controller('auth')
@@ -44,7 +47,7 @@ export class AuthController {
 
     try {
       const user = await this.authService.findUserById(userId);
-      const result = await this.authService.login(user);
+      const result = this.authService.login(user);
       // Mirror login response structure
       return result;
     } catch (error: unknown) {
@@ -161,14 +164,52 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async getCurrentUser(@Request() req: AuthenticatedRequest) {
-    const userId = req.user.userId;
-    const user = await this.authService.findUserById(userId);
-    return { success: true, user };
+    try {
+      const userId = req.user.userId;
+      const user = await this.authService.findUserById(userId);
+      return { success: true, user };
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to retrieve user';
+      console.log('❌ Failed to get current user:', errorMessage);
+      throw new UnauthorizedException('Unable to retrieve user profile');
+    }
   }
-  catch(error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Failed to retrieve user';
-    console.log('❌ Failed to get current user:', errorMessage);
-    throw new UnauthorizedException('Unable to retrieve user profile');
+
+  @Patch('change-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change user password' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid password data' })
+  @ApiResponse({ status: 401, description: 'Current password incorrect' })
+  async changePassword(
+    @Request() req: AuthenticatedRequest,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    try {
+      const userId = req.user.userId || req.user.id;
+      console.log('🔐 Password change attempt for user:', userId);
+
+      const result = await this.authService.changePassword(
+        userId,
+        changePasswordDto,
+      );
+
+      console.log('✅ Password changed successfully for:', userId);
+      return result;
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Password change failed';
+      console.log('❌ Password change failed:', errorMessage);
+
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new BadRequestException(errorMessage);
+    }
   }
 }

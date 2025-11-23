@@ -66,46 +66,22 @@ export class UsersService {
 
   async updateUser(id: string, updateUserDto: Partial<CreateUsersDto>) {
     const user = await this.getUserById(id);
-    const {
-      fullname,
-      email,
-      password,
-      phoneNumber,
-      roles,
-      profilePictureUrl,
-      bio,
-      address,
-      dateOfBirth,
-    } = updateUserDto;
 
-    if (fullname) {
-      user.fullname = fullname;
+    // Handle password hashing separately (needs transformation)
+    if (updateUserDto.password) {
+      user.password = await bcrypt.hash(updateUserDto.password, 10);
+      delete updateUserDto.password; // Don't assign plain password again
     }
-    if (email) {
-      user.email = email;
+
+    // Handle date conversion separately
+    if (updateUserDto.dateOfBirth) {
+      user.dateOfBirth = new Date(updateUserDto.dateOfBirth);
+      delete updateUserDto.dateOfBirth; // Already handled
     }
-    if (password) {
-      // Hash password if being updated
-      user.password = await bcrypt.hash(password, 10);
-    }
-    if (phoneNumber) {
-      user.phoneNumber = phoneNumber;
-    }
-    if (roles) {
-      user.roles = roles;
-    }
-    if (profilePictureUrl) {
-      user.profilePictureUrl = profilePictureUrl;
-    }
-    if (bio) {
-      user.bio = bio;
-    }
-    if (address) {
-      user.address = address;
-    }
-    if (dateOfBirth) {
-      user.dateOfBirth = new Date(dateOfBirth);
-    }
+
+    // Merge all other fields automatically
+    Object.assign(user, updateUserDto);
+
     return this.usersRepository.save(user);
   }
 
@@ -156,7 +132,7 @@ export class UsersService {
           .leftJoin('employee_profiles', 'profile', 'profile.user_id = user.id')
           .where('user.id = :userId', { userId: user.id })
           .select('profile.id')
-          .getRawOne();
+          .getRawOne<{ profile_id: number | null }>();
 
         return {
           ...user,

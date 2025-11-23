@@ -3,6 +3,7 @@ import {
   ConflictException,
   BadRequestException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
@@ -11,6 +12,7 @@ import { LeaveTypesService } from '../leave-types/leave-types.service';
 import * as bcrypt from 'bcrypt';
 import { AuthResponse } from './types/interfaces/auth-response.interface';
 import { RegisterUserDto } from './types/register-user.dto';
+import { ChangePasswordDto } from './types/dtos/change-password.dto';
 import { User } from '../users/entities/users.entity';
 @Injectable()
 export class AuthService {
@@ -193,5 +195,56 @@ export class AuthService {
       console.log('❌ Error finding user by ID:', errorMessage);
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
+  }
+
+  async changePassword(
+    userId: string,
+    changePasswordDto: ChangePasswordDto,
+  ): Promise<{ success: boolean; message: string }> {
+    const { currentPassword, newPassword, confirmPassword } = changePasswordDto;
+
+    // Validate that new passwords match
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException('New passwords do not match');
+    }
+
+    // Validate that new password is different from current
+    if (currentPassword === newPassword) {
+      throw new BadRequestException(
+        'New password must be different from current password',
+      );
+    }
+
+    // Validate password length
+    if (newPassword.length < 6) {
+      throw new BadRequestException(
+        'Password must be at least 6 characters long',
+      );
+    }
+
+    // Find the user
+    const user = await this.findUserById(userId);
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password,
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the password using the users service
+    await this.usersService.updateUser(userId, { password: hashedPassword });
+
+    console.log('✅ Password changed successfully for user:', userId);
+
+    return {
+      success: true,
+      message: 'Password changed successfully',
+    };
   }
 }
