@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('calendar')
@@ -12,11 +12,12 @@ export class CalendarController {
   })
   @ApiQuery({ name: 'month', required: false, type: Number })
   @ApiQuery({ name: 'year', required: false, type: Number })
-  async getCalendarEvents(
-    @Query('month') month?: number,
-    @Query('year') year?: number,
+  getCalendarEvents(
+    @Query('month', new ParseIntPipe({ optional: true })) month?: number,
+    @Query('year', new ParseIntPipe({ optional: true })) year?: number,
   ) {
     // Return mock calendar events for now
+    // TODO: Replace with actual service call when CalendarService is implemented
     const mockEvents = [
       {
         id: '1',
@@ -47,10 +48,7 @@ export class CalendarController {
       },
     ];
 
-    return {
-      success: true,
-      data: mockEvents,
-      message: 'Calendar events retrieved successfully',
-    };
+    // ✅ No manual wrapping - interceptor handles it
+    return mockEvents;
   }
 }

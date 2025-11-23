@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('holidays')
@@ -8,8 +8,11 @@ export class HolidaysController {
   @ApiOperation({ summary: 'Get holidays for a specific year' })
   @ApiResponse({ status: 200, description: 'Holidays retrieved successfully' })
   @ApiQuery({ name: 'year', required: false, type: Number })
-  async getHolidays(@Query('year') year?: number) {
+  getHolidays(
+    @Query('year', new ParseIntPipe({ optional: true })) year?: number,
+  ) {
     // Return mock holidays for now
+    // TODO: Replace with actual service call when HolidaysService is implemented
     const mockHolidays = [
       {
         id: '1',
@@ -43,10 +46,7 @@ export class HolidaysController {
       },
     ];
 
-    return {
-      success: true,
-      data: mockHolidays,
-      message: 'Holidays retrieved successfully',
-    };
+    // ✅ No manual wrapping - interceptor handles it
+    return mockHolidays;
   }
 }

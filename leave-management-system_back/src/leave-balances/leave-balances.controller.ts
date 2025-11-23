@@ -8,6 +8,8 @@ import {
   ParseIntPipe,
   UseGuards,
   Req,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { LeaveBalancesService } from './leave-balances.service';
 import { CreateBalanceDto } from './types/dtos/create-balance.dto';
@@ -36,15 +38,20 @@ export class LeaveBalancesController {
 
     return id;
   }
+
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Get current user s aggregated leave balance summary',
+    summary: "Get current user's aggregated leave balance summary",
   })
-  async getMyBalances(@Req() req: Request) {
+  @ApiResponse({
+    status: 200,
+    description: 'Leave balance retrieved successfully',
+  })
+  getMyBalances(@Req() req: Request) {
     const userId = this.getUserId(req);
-    return await this.svc.findByUserId(userId);
+    return this.svc.findByUserId(userId);
   }
 
   @Get('user/:id')
@@ -54,36 +61,36 @@ export class LeaveBalancesController {
     summary: 'Get full leave balances (detailed records) for a specific user',
   })
   @ApiResponse({ status: 200, type: [LeaveBalanceEntity] })
-  async findByUserIdDetailed(@Param('id') id: string) {
-    return await this.svc.findByUserIdDetailed(id);
+  findByUserIdDetailed(@Param('id') id: string) {
+    return this.svc.findByUserIdDetailed(id);
   }
+
   @Get()
   @ApiOperation({ summary: 'Get all leave balance records' })
   @ApiResponse({ status: 200, type: [LeaveBalanceEntity] })
-  async findAll() {
-    return await this.svc.findAll();
+  findAll() {
+    return this.svc.findAll();
   }
+
   @Post()
+  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new leave balance record' })
   @ApiResponse({ status: 201, type: LeaveBalanceEntity })
-  async create(@Body() dto: CreateBalanceDto) {
-    return await this.svc.create(dto);
+  create(@Body() dto: CreateBalanceDto) {
+    return this.svc.create(dto);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get one leave balance record by ID' })
   @ApiResponse({ status: 200, type: LeaveBalanceEntity })
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    return await this.svc.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.svc.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Adjust leave balance for a record' })
   @ApiResponse({ status: 200, type: LeaveBalanceEntity })
-  async adjust(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: AdjustBalanceDto,
-  ) {
-    return await this.svc.adjust(id, dto);
+  adjust(@Param('id', ParseIntPipe) id: number, @Body() dto: AdjustBalanceDto) {
+    return this.svc.adjust(id, dto);
   }
 }

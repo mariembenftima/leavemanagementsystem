@@ -6,6 +6,9 @@ import {
   Body,
   Param,
   Request,
+  ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -15,7 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { LeaveRequestsService } from './leave-requests.service';
 import { LeaveRequestStatus } from './entities/leave-request.entity';
-import { AuthenticatedRequest } from '../auth/types/authenticated-request'; // ✅ Import correct
+import { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { CreateLeaveRequestDto } from './types/dtos/create-leave-request.dto';
 
 @ApiTags('leave-requests')
@@ -24,27 +27,14 @@ import { CreateLeaveRequestDto } from './types/dtos/create-leave-request.dto';
 export class LeaveRequestsController {
   constructor(private readonly leaveRequestsService: LeaveRequestsService) {}
 
+  @Get('all')
   @ApiOperation({ summary: 'Get all leave requests (HR/Admin only)' })
   @ApiResponse({
     status: 200,
     description: 'All leave requests retrieved successfully',
   })
-  @Get('all')
-  async getAllLeaveRequests() {
-    try {
-      const leaveRequests =
-        await this.leaveRequestsService.getAllLeaveRequests();
-      return {
-        success: true,
-        data: leaveRequests,
-        message: 'All leave requests retrieved successfully',
-      };
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      const errorStack = err instanceof Error ? err.stack : undefined;
-      console.error('❌ /leave-requests/all failed:', errorMessage, errorStack);
-      throw err;
-    }
+  getAllLeaveRequests() {
+    return this.leaveRequestsService.getAllLeaveRequests();
   }
 
   @Get('pending')
@@ -53,52 +43,32 @@ export class LeaveRequestsController {
     status: 200,
     description: 'Pending leave requests retrieved successfully',
   })
-  async getPendingLeaveRequests() {
-    const pendingRequests =
-      await this.leaveRequestsService.getPendingLeaveRequests();
-    return {
-      success: true,
-      data: pendingRequests,
-      message: 'Pending leave requests retrieved successfully',
-    };
+  getPendingLeaveRequests() {
+    return this.leaveRequestsService.getPendingLeaveRequests();
   }
 
+  @Get('me')
   @ApiOperation({ summary: "Get current user's leave requests" })
   @ApiResponse({
     status: 200,
     description: 'Leave requests retrieved successfully',
   })
-  @Get('me')
-  async getMyLeaveRequests(@Request() req: AuthenticatedRequest) {
-    const userId = req.user.userId;
-    return {
-      success: true,
-      data: await this.leaveRequestsService.getLeaveRequestsByUser(userId),
-    };
+  getMyLeaveRequests(@Request() req: AuthenticatedRequest) {
+    return this.leaveRequestsService.getLeaveRequestsByUser(req.user.userId);
   }
 
   @Post()
+  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new leave request' })
   @ApiResponse({
     status: 201,
     description: 'Leave request created successfully',
   })
-  async createLeaveRequest(
+  createLeaveRequest(
     @Body() dto: CreateLeaveRequestDto,
-    @Request() req: AuthenticatedRequest, // ✅ Typé correctement
+    @Request() req: AuthenticatedRequest,
   ) {
-    const userId = req.user.userId; // ✅ Plus d'erreur "unsafe any"
-
-    const createdRequest = await this.leaveRequestsService.createLeaveRequest(
-      dto,
-      userId,
-    );
-
-    return {
-      success: true,
-      message: 'Leave request created successfully',
-      data: createdRequest,
-    };
+    return this.leaveRequestsService.createLeaveRequest(dto, req.user.userId);
   }
 
   @Put(':id/status')
@@ -107,20 +77,25 @@ export class LeaveRequestsController {
     status: 200,
     description: 'Leave request status updated successfully',
   })
-  async updateLeaveRequestStatus(
-    @Param('id') id: string,
+  updateLeaveRequestStatus(
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateStatusDto: { status: LeaveRequestStatus },
-    @Request() req: AuthenticatedRequest, // ✅ Typé correctement
+    @Request() req: AuthenticatedRequest,
   ) {
-    const updated = await this.leaveRequestsService.updateLeaveRequestStatus(
+    return this.leaveRequestsService.updateLeaveRequestStatus(
       id,
       updateStatusDto.status,
       req.user.userId,
     );
-    return {
-      success: true,
-      data: updated,
-      message: `Leave request ${updateStatusDto.status} successfully`,
-    };
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a single leave request by ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Leave request retrieved successfully',
+  })
+  getLeaveRequestById(@Param('id', ParseUUIDPipe) id: string) {
+    return this.leaveRequestsService.getLeaveRequestById(id);
   }
 }

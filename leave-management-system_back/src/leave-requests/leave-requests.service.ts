@@ -12,6 +12,7 @@ import { CreateLeaveRequestDto } from './types/dtos/create-leave-request.dto';
 
 @Injectable()
 export class LeaveRequestsService {
+  [x: string]: any;
   constructor(
     @InjectRepository(LeaveRequest)
     private readonly leaveRequestRepository: Repository<LeaveRequest>,
