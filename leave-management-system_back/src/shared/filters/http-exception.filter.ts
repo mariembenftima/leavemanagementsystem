@@ -4,44 +4,84 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
-import { Response, Request } from 'express';
+import { Request, Response } from 'express';
 
-@Catch(HttpException)
+interface HttpExceptionResponse {
+  statusCode: number;
+  message: string | string[];
+  error?: string;
+}
+
+interface ErrorResponse {
+  statusCode: number;
+  message: string | string[];
+  timestamp: string;
+  path: string;
+  error?: string | object;
+}
+
+@Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
-  catch(exception: HttpException, host: ArgumentsHost) {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
+  catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
-    const status = exception.getStatus() || HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const exceptionResponse = exception.getResponse();
+    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let message: string | string[] = 'Internal server error';
+    let errorDetail: string | object | undefined;
 
-    let errorMessage: string;
+    if (exception instanceof HttpException) {
+      status = exception.getStatus();
+      const exceptionResponse = exception.getResponse();
 
-    if (
-      exceptionResponse &&
-      typeof exceptionResponse === 'object' &&
-      'message' in exceptionResponse
-    ) {
-      if (Array.isArray(exceptionResponse.message)) {
-        errorMessage = exceptionResponse.message.join(', ');
-      } else if (typeof exceptionResponse.message === 'string') {
-        errorMessage = exceptionResponse.message;
-      } else {
-        errorMessage = String(exceptionResponse.message);
+      if (typeof exceptionResponse === 'string') {
+        message = exceptionResponse;
+      } else if (
+        typeof exceptionResponse === 'object' &&
+        exceptionResponse !== null
+      ) {
+        const responseObj = exceptionResponse as HttpExceptionResponse;
+        message = responseObj.message || message;
+        errorDetail = responseObj.error || responseObj;
       }
+    } else if (exception instanceof Error) {
+      message = exception.message;
+      this.logger.error(
+        `Unhandled error: ${exception.message}`,
+        exception.stack,
+      );
     } else {
-      errorMessage = exception.message || 'An error occurred';
+      message = 'An unexpected error occurred';
+      this.logger.error('Unknown exception type', String(exception));
     }
 
-    const url = request && request.url ? request.url : 'unknown';
-
-    response.status(status).json({
+    const errorResponse: ErrorResponse = {
       statusCode: status,
+      message,
       timestamp: new Date().toISOString(),
-      path: url,
-      message: errorMessage,
-    });
+      path: request.url,
+    };
+
+    if (errorDetail) {
+      errorResponse.error = errorDetail;
+    }
+
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      this.logger.error(
+        `${request.method} ${request.url} - ${status}`,
+        JSON.stringify(errorResponse),
+      );
+    } else {
+      this.logger.warn(
+        `${request.method} ${request.url} - ${status}: ${Array.isArray(message) ? message.join(', ') : message}`,
+      );
+    }
+
+    response.status(status).json(errorResponse);
   }
 }
