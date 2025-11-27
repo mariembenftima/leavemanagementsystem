@@ -82,7 +82,9 @@ export class ProfileController {
       throw new UnauthorizedException('User ID is required');
     }
 
-    return {
+    // Create a partial User object for authentication purposes
+    // The profile relationship is not needed for authorization checks
+    const user: User = {
       id: authenticatedUser.userId,
       email: authenticatedUser.email,
       roles: authenticatedUser.roles,
@@ -96,7 +98,10 @@ export class ProfileController {
       createdAt: new Date(),
       updatedAt: new Date(),
       leaveBalances: [],
+      profile: null as unknown as EmployeeProfile, // ✅ Properly typed as EmployeeProfile
     };
+
+    return user;
   }
 
   private activityToSummary(activity: Activity): ActivitySummary {
@@ -192,50 +197,35 @@ export class ProfileController {
     let performance: Performance | null = null;
 
     try {
-      profileData = await this.profileService.getProfile(
+      // ✅ Use ProfileService.getFullProfile() which already gets everything
+      const fullProfileData = await this.profileService.getFullProfile(
         user.userId,
         this.toUserEntity(user),
       );
 
+      profileData = fullProfileData.profile;
+      performance = fullProfileData.performance || null;
+
+      // ✅ Convert activity summaries from the service
+      if (fullProfileData.recentActivities) {
+        recentActivities = fullProfileData.recentActivities.map(
+          (activitySummary: ActivitySummary) => ({
+            id: activitySummary.id,
+            type: activitySummary.type,
+            title: activitySummary.title,
+            description: activitySummary.description || '',
+            timeAgo: this.getTimeAgo(activitySummary.createdAt),
+            displayDate: activitySummary.displayDate,
+            createdAt: activitySummary.createdAt,
+          }),
+        );
+      }
+
+      // Get leave balance
       const rawLeaveBalance = await this.leaveBalancesService.findByUserId(
         user.userId,
       );
-
       leaveBalance = rawLeaveBalance || {};
-
-      if (
-        'activityRepository' in this.profileService &&
-        this.profileService.activityRepository
-      ) {
-        // First get the profile ID which is needed for the activity repository
-        const profile = profileData as EmployeeProfile;
-        if (profile && profile.id) {
-          // Use profile ID (number) instead of userId (string)
-          const rawActivities =
-            await this.profileService.activityRepository.getRecentActivities(
-              profile.id,
-              5,
-            );
-
-          // Convert activities to our ActivitySummary format without casting
-          if (Array.isArray(rawActivities)) {
-            recentActivities = rawActivities.map((activity) =>
-              this.activityToSummary(activity),
-            );
-          }
-        }
-      }
-
-      if (
-        'performanceRepository' in this.profileService &&
-        this.profileService.performanceRepository
-      ) {
-        const rawPerformance =
-          await this.profileService.performanceRepository.getLatestPerformance(
-            user.userId,
-          );
-        performance = rawPerformance || null;
-      }
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
@@ -244,6 +234,7 @@ export class ProfileController {
         errorMessage,
       );
 
+      // Fallback data
       leaveBalance = {
         annual: { total: 25, used: 5, remaining: 20 },
         sick: { total: 12, used: 2, remaining: 10 },

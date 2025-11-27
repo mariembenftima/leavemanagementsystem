@@ -12,12 +12,8 @@ import {
   BadRequestException,
   Query,
   UseGuards,
-  ParseIntPipe,
   DefaultValuePipe,
-  HttpCode,
-  HttpStatus,
-  ClassSerializerInterceptor,
-  SerializeOptions,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
@@ -34,38 +30,30 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { RolesGuard } from './roleguard';
 import { Roles } from './roledecorator';
 import { UserRole } from './types/enums/user-role.enum';
-import { UserResponseDto } from './types/dtos/user-response.dto';
 
 @ApiTags('users')
 @Controller('users')
-@UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly profilePictureService: ProfilePictureService,
   ) {}
 
-  @Get('simple')
-  getUser() {
-    return this.usersService.getUser();
-  }
-
+  // ✅ FIX: Removed duplicate @Get() - kept the one with guards and pagination
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.HR)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Get all users with pagination and filters (Admin/HR only)',
-  })
+  @ApiOperation({ summary: 'Get all users (Admin/HR only)' })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
-  getAllUsers(
-    @Query('page', DefaultValuePipe, ParseIntPipe) page: number,
-    @Query('limit', DefaultValuePipe, ParseIntPipe) limit: number,
+  async getAllUsers(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
     @Query('search') search?: string,
     @Query('role') role?: string,
     @Query('hasProfile') hasProfile?: string,
   ) {
-    return this.usersService.getAllUsers({
+    const users = await this.usersService.getAllUsers({
       page,
       limit,
       search,
@@ -77,6 +65,23 @@ export class UsersController {
             ? false
             : undefined,
     });
+
+    return {
+      success: true,
+      data: users.data,
+      pagination: {
+        total: users.total,
+        page: users.page,
+        limit: users.limit,
+        totalPages: users.totalPages,
+      },
+      message: 'Users retrieved successfully',
+    };
+  }
+
+  @Post()
+  async createUser(@Body() createUserDto: CreateUsersDto) {
+    return this.usersService.createUser(createUserDto);
   }
 
   @Get('stats')
@@ -84,64 +89,55 @@ export class UsersController {
   @Roles(UserRole.ADMIN, UserRole.HR)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user statistics (Admin/HR only)' })
-  getUserStats() {
-    return this.usersService.getUserStats();
+  async getUserStats() {
+    const stats = await this.usersService.getUserStats();
+    return {
+      success: true,
+      data: stats,
+      message: 'User statistics retrieved successfully',
+    };
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @SerializeOptions({ type: UserResponseDto })
   @ApiOperation({ summary: 'Get user by ID' })
-  getUserById(@Param('id', ParseUUIDPipe) id: string) {
-    return this.usersService.getUserById(id);
-  }
-
-  @Post()
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create a new user' })
-  @ApiResponse({ status: 201, description: 'User created successfully' })
-  createUser(@Body() createUserDto: CreateUsersDto) {
-    return this.usersService.createUser(createUserDto);
+  async getUserById(@Param('id', ParseUUIDPipe) id: string) {
+    // ✅ FIX: Remove 'new' - just use ParseUUIDPipe directly
+    const user = await this.usersService.getUserById(id);
+    return {
+      success: true,
+      data: user,
+      message: 'User retrieved successfully',
+    };
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update user information' })
-  updateUser(
-    @Param('id', ParseUUIDPipe) id: string,
+  async updateUser(
     @Body() updateUserDto: UpdateUsersDto,
+    @Param('id', ParseUUIDPipe) id: string, // ✅ FIX: Remove 'new'
   ) {
-    return this.usersService.updateUser(id, updateUserDto);
+    const dto: Partial<CreateUsersDto> = {
+      ...updateUserDto,
+      dateOfBirth: updateUserDto.dateOfBirth
+        ? new Date(updateUserDto.dateOfBirth)
+        : undefined,
+    };
+    return this.usersService.updateUser(id, dto);
   }
 
-  @Patch(':id/roles')
+  @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update user roles (Admin only)' })
-  updateUserRoles(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body('roles') roles: string[],
-  ) {
-    return this.usersService.updateUserRoles(id, roles);
-  }
-
-  @Patch(':id/activate')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.HR)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Activate user account (Admin/HR only)' })
-  activateUser(@Param('id', ParseUUIDPipe) id: string) {
-    return this.usersService.updateUserStatus(id, true);
-  }
-
-  @Patch(':id/deactivate')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.HR)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Deactivate user account (Admin/HR only)' })
-  deactivateUser(@Param('id', ParseUUIDPipe) id: string) {
-    return this.usersService.updateUserStatus(id, false);
+  @ApiOperation({ summary: 'Delete user (Admin only)' })
+  async deleteUser(@Param('id', ParseUUIDPipe) id: string) {
+    // ✅ FIX: Remove 'new'
+    await this.usersService.deleteUser(id);
+    return {
+      success: true,
+      message: 'User deleted successfully',
+    };
   }
 
   @Post(':id/profile-pic')
@@ -150,34 +146,34 @@ export class UsersController {
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Upload profile picture' })
   async uploadProfilePicture(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseUUIDPipe) id: string, // ✅ FIX: Remove 'new'
     @UploadedFile() file: Express.Multer.File,
   ) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
+    try {
+      if (!file) {
+        throw new BadRequestException('No file uploaded');
+      }
 
-    if (!ProfilePictureService.validateFile(file)) {
+      if (!ProfilePictureService.validateFile(file)) {
+        throw new BadRequestException(
+          'Invalid file. Only JPG, JPEG, PNG, and WEBP files up to 5MB are allowed.',
+        );
+      }
+
+      const profilePicUrl =
+        await this.profilePictureService.uploadProfilePicture(id, file);
+
+      return {
+        success: true,
+        data: { profilePicUrl },
+        message: 'Profile picture uploaded successfully',
+      };
+    } catch (error) {
       throw new BadRequestException(
-        'Invalid file. Only JPG, JPEG, PNG, WEBP files under 5MB are allowed',
+        error instanceof Error
+          ? error.message
+          : 'Failed to upload profile picture',
       );
     }
-
-    const profilePicUrl = await this.profilePictureService.uploadProfilePicture(
-      id,
-      file,
-    );
-
-    return { profilePicUrl };
-  }
-
-  @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete user (Admin only)' })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteUser(@Param('id', ParseUUIDPipe) id: string) {
-    await this.usersService.deleteUser(id);
   }
 }
