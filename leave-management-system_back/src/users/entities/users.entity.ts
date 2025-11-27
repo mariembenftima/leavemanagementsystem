@@ -1,5 +1,5 @@
 import { TeamEntity } from '../../teams/entities/team.entity';
-import { ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import { ManyToOne, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import {
   Column,
   CreateDateColumn,
@@ -10,6 +10,7 @@ import {
 import { Exclude, Expose } from 'class-transformer';
 import { IUser } from '../types/interfaces/users.interfaces';
 import { LeaveBalanceEntity } from 'src/leave-balances/entities/leave-balance.entity';
+import { EmployeeProfile } from 'src/profile/entities/employee-profile.entity';
 
 @Entity('users')
 export class User implements IUser {
@@ -85,4 +86,8 @@ export class User implements IUser {
   @Expose()
   @OneToMany(() => LeaveBalanceEntity, (lb) => lb.user)
   leaveBalances: LeaveBalanceEntity[];
+
+  @Expose()
+  @OneToOne(() => EmployeeProfile, (profile) => profile.user)
+  profile: EmployeeProfile;
 }

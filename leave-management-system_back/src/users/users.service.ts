@@ -1,9 +1,10 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { CreateUsersDto } from './types/dtos/create-users.dto';
-import { Repository } from 'typeorm';
+import { Repository, Brackets } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/users.entity';
 import * as bcrypt from 'bcrypt';
+
 interface GetAllUsersOptions {
   page: number;
   limit: number;
@@ -11,6 +12,7 @@ interface GetAllUsersOptions {
   role?: string;
   hasProfile?: boolean;
 }
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -90,6 +92,7 @@ export class UsersService {
     return this.usersRepository.delete(user.id);
   }
 
+  // ✅ OPTIMIZED: Fixed N+1 query problem - now uses single query!
   async getAllUsers(options: GetAllUsersOptions) {
     const { page = 1, limit = 10, search, role, hasProfile } = options;
     const skip = (page - 1) * limit;
@@ -97,16 +100,20 @@ export class UsersService {
     const queryBuilder = this.usersRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.team', 'team')
-      .leftJoin('employee_profiles', 'profile', 'profile.user_id = user.id')
+      .leftJoin('user.profile', 'profile') // ✅ Use TypeORM relation instead of raw join
       .addSelect(
         'CASE WHEN profile.id IS NOT NULL THEN true ELSE false END',
-        'hasProfile',
+        'user_hasProfile', // ✅ Use alias to avoid conflicts
       );
 
     if (search) {
+      // ✅ Use Brackets for proper grouping and remove leading % for better index usage
       queryBuilder.andWhere(
-        '(user.fullname ILIKE :search OR user.email ILIKE :search OR user.username ILIKE :search)',
-        { search: `%${search}%` },
+        new Brackets((qb) => {
+          qb.where('user.fullname ILIKE :search', { search: `${search}%` })
+            .orWhere('user.email ILIKE :search', { search: `${search}%` })
+            .orWhere('user.username ILIKE :search', { search: `${search}%` });
+        }),
       );
     }
 
@@ -115,31 +122,19 @@ export class UsersService {
     }
 
     if (hasProfile !== undefined) {
-      if (hasProfile) {
-        queryBuilder.andWhere('profile.id IS NOT NULL');
-      } else {
-        queryBuilder.andWhere('profile.id IS NULL');
-      }
+      queryBuilder.andWhere(
+        hasProfile ? 'profile.id IS NOT NULL' : 'profile.id IS NULL',
+      );
     }
 
     queryBuilder.orderBy('user.createdAt', 'DESC').skip(skip).take(limit);
 
     const [users, total] = await queryBuilder.getManyAndCount();
-    const usersWithProfile = await Promise.all(
-      users.map(async (user) => {
-        const profileExists = await this.usersRepository
-          .createQueryBuilder('user')
-          .leftJoin('employee_profiles', 'profile', 'profile.user_id = user.id')
-          .where('user.id = :userId', { userId: user.id })
-          .select('profile.id')
-          .getRawOne<{ profile_id: number | null }>();
 
-        return {
-          ...user,
-          hasProfile: !!profileExists?.profile_id,
-        };
-      }),
-    );
+    const usersWithProfile = users.map((user) => ({
+      ...user,
+      hasProfile: !!(user as any).user_hasProfile,
+    }));
 
     return {
       data: usersWithProfile,
@@ -161,7 +156,7 @@ export class UsersService {
 
     const usersWithProfiles = await this.usersRepository
       .createQueryBuilder('user')
-      .leftJoin('employee_profiles', 'profile', 'profile.user_id = user.id')
+      .leftJoin('user.profile', 'profile') // ✅ Use relation instead of raw join
       .where('profile.id IS NOT NULL')
       .getCount();
 

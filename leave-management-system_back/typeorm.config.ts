@@ -1,8 +1,8 @@
-import { DataSource } from "typeorm"
-import { ConfigService } from "@nestjs/config"
-import * as dotenv from 'dotenv'
-dotenv.config()
-const configService = new ConfigService()
+import { DataSource } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
+import * as dotenv from 'dotenv';
+dotenv.config();
+const configService = new ConfigService();
 export default new DataSource({
   type: 'postgres',
   host: configService.get('DB_HOST'),
@@ -11,6 +11,6 @@ export default new DataSource({
   password: configService.get('DB_PASSWORD'),
   database: configService.get('DB_NAME'),
   entities: [__dirname + '/src/**/*.entity{.ts,.js}'],
-  migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
+  migrations: ['./migrations/**/*{.ts,.js}'],
   migrationsTableName: 'migrations_history',
-})
+});
