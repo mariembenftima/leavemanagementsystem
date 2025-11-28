@@ -53,8 +53,11 @@ export class LeaveBalancesController {
     description: 'Leave balance retrieved successfully',
   })
   getMyBalances(@Req() req: Request) {
+    console.log('Fetching leave balances for current user');
     const userId = this.getUserId(req);
-    return this.svc.findByUserId(userId);
+    const lbs = this.svc.findByUserId(userId);
+    console.log('Leave balances for user', userId, ':', lbs);
+    return lbs;
   }
 
   @Get('user/:id')
