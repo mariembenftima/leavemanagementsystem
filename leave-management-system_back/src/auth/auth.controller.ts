@@ -75,10 +75,9 @@ export class AuthController {
         loginDto.password,
       );
       console.log('✅ Login successful for:', identifier);
+      console.log('result:', result);
       return {
         ...result,
-        access_token: result.data?.access_token,
-        user: result.data?.user,
       };
     } catch (error: unknown) {
       const errorMessage =
@@ -138,8 +137,8 @@ export class AuthController {
       console.log('✅ Registration successful for:', registerDto.email);
       return {
         success: true,
-        user: result.data.user,
-        data: result.data,
+        user: result.user,
+        data: result,
         message: 'Registration successful',
       };
     } catch (error: unknown) {

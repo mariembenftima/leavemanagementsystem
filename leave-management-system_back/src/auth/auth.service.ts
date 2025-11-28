@@ -74,15 +74,13 @@ export class AuthService {
 
     return {
       success: true,
-      data: {
-        access_token,
-        user: {
-          id: user.id,
-          email: user.email,
-          firstName: user.fullname.split(' ')[0] || user.fullname,
-          lastName: user.fullname.split(' ').slice(1).join(' ') || '',
-          roles: user.roles || [],
-        },
+      access_token,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.fullname.split(' ')[0] || user.fullname,
+        lastName: user.fullname.split(' ').slice(1).join(' ') || '',
+        roles: user.roles || [],
       },
       message: 'Login successful',
     };
@@ -138,16 +136,15 @@ export class AuthService {
 
       return {
         success: true,
-        data: {
-          access_token,
-          user: {
-            id: newUser.id,
-            email: newUser.email,
-            firstName: newUser.fullname.split(' ')[0] || newUser.fullname,
-            lastName: newUser.fullname.split(' ').slice(1).join(' ') || '',
-            roles: newUser.roles || [],
-          },
+        access_token,
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          firstName: newUser.fullname.split(' ')[0] || newUser.fullname,
+          lastName: newUser.fullname.split(' ').slice(1).join(' ') || '',
+          roles: newUser.roles || [],
         },
+
         message: 'Registration successful',
       };
     } catch (error: unknown) {

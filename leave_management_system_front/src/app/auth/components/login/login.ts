@@ -89,11 +89,13 @@ export class login implements OnInit, OnDestroy {
         email: credentials.email,
         password: credentials.password
       };
+      console.log('Attempting login with:', loginRequest);
 
       const response = await firstValueFrom(this.authService.login(loginRequest));
-
-      if (response && response.success) {
-        const apiUser: any = response.data?.user || {};
+      console.log('response data in component:', response);
+      if (response && response.data.success) {
+        console.log('Login response in login component:', response);
+        const apiUser: any = response.data.user || {};
         const apiRoles = apiUser.roles as string | string[] | undefined;
         const rolesArray = Array.isArray(apiRoles)
           ? apiRoles
@@ -106,6 +108,7 @@ export class login implements OnInit, OnDestroy {
           role: rolesArray[0] || 'EMPLOYEE',
           lastLogin: new Date(),
         };
+        console.log('successfully logged in user:', this.currentUser);
         
         if (credentials.rememberMe) {
           this.saveUserSession(this.currentUser);
@@ -114,7 +117,7 @@ export class login implements OnInit, OnDestroy {
         this.showSuccessPopup = true;
         console.log('Login successful:', this.currentUser);
       } else {
-        this.showError(response?.message || 'Invalid email or password. Please try again.');
+        this.showError( 'Invalid email or password. Please try again.');
         this.shakeLoginCard();
       }
     } catch (error: any) {

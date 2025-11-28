@@ -12,13 +12,24 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface LoginResponse {
+// export interface LoginResponse {
+//   success: boolean;
+//   access_token: string;
+//   user: EmployeeProfile;
+//   message: string;
+// }
+
+export interface LoginResponseData {
+  access_token: string;
+  message: string;
   success: boolean;
-  data: {
-    access_token: string;
-    user: EmployeeProfile;
-  };
-  message?: string;
+  user: EmployeeProfile;
+}
+
+export interface LoginResponse {
+  statusCode: number;
+  data: LoginResponseData;
+  timestamp: string;
 }
 
 @Injectable({
@@ -53,7 +64,9 @@ export class AuthService {
       .post<LoginResponse>(`${this.apiUrl}/auth/login`, credentials)
       .pipe(
         tap((response) => {
-          if (response.success && response.data.access_token) {
+          console.log('response data from service before conditopn:', response);
+          if (response.data.success && response.data.access_token) {
+            console.log('response data from service:', response);
             const user: any = response.data.user || {};
             if (user.roles && typeof user.roles === 'string') {
               user.roles = user.roles.split(',').map((r: string) => r.trim());
