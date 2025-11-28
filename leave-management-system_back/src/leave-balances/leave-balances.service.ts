@@ -2,15 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LeaveBalanceEntity } from './entities/leave-balance.entity';
-
 import { LeaveTypeEntity } from '../leave-types/entities/leave-type.entity';
-import { LeaveBalancesPort } from './types/ports/leave-balances.port';
 import { User } from 'src/users/entities/users.entity';
 import { CreateBalanceDto } from './types/dtos/create-balance.dto';
 import { AdjustBalanceDto } from './types/dtos/adjust-balance.dto';
 
 @Injectable()
-export class LeaveBalancesService implements LeaveBalancesPort {
+export class LeaveBalancesService {
   constructor(
     @InjectRepository(LeaveBalanceEntity)
     private readonly repo: Repository<LeaveBalanceEntity>,
@@ -20,7 +18,6 @@ export class LeaveBalancesService implements LeaveBalancesPort {
     private readonly ltRepo: Repository<LeaveTypeEntity>,
   ) {}
 
-  // ✅ Create a new leave balance
   async create(dto: CreateBalanceDto) {
     const user = await this.usersRepo.findOne({ where: { id: dto.userId } });
     if (!user) throw new NotFoundException(`User ${dto.userId} not found`);
@@ -66,6 +63,7 @@ export class LeaveBalancesService implements LeaveBalancesPort {
         remaining: number;
       }
     > = {};
+
     for (const bal of balances) {
       const total = (bal.leaveType?.maxDays || 24) + (bal.carryover || 0);
       const used = bal.used;
@@ -79,7 +77,6 @@ export class LeaveBalancesService implements LeaveBalancesPort {
     return summary;
   }
 
-  // ✅ Get a user's detailed leave balance records (used for admin/reporting)
   async findByUserIdDetailed(userId: string) {
     const balances = await this.repo.find({
       where: { user: { id: String(userId) } },
@@ -94,7 +91,6 @@ export class LeaveBalancesService implements LeaveBalancesPort {
     return balances;
   }
 
-  // ✅ Get one record by ID
   async findOne(id: number) {
     const lb = await this.repo.findOne({
       where: { id },
@@ -103,15 +99,11 @@ export class LeaveBalancesService implements LeaveBalancesPort {
     if (!lb) throw new NotFoundException(`Leave balance ${id} not found`);
     return lb;
   }
-
-  // ✅ Adjust balance for a given record
   async adjust(id: number, dto: AdjustBalanceDto) {
     const lb = await this.repo.findOne({ where: { id } });
     if (!lb) throw new NotFoundException(`Leave balance ${id} not found`);
+    Object.assign(lb, dto);
 
-    lb.year = dto.year;
-    lb.carryover = dto.carryover;
-    lb.used = dto.used;
     return await this.repo.save(lb);
   }
 }

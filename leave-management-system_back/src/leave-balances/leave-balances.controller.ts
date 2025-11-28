@@ -10,6 +10,7 @@ import {
   Req,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
 } from '@nestjs/common';
 import { LeaveBalancesService } from './leave-balances.service';
 import { CreateBalanceDto } from './types/dtos/create-balance.dto';
@@ -23,9 +24,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Request } from 'express';
+import { ResponseInterceptor } from 'src/shared/interceptors/response.interceptor';
 
 @ApiTags('leave-balances')
 @Controller('leave-balances')
+@UseInterceptors(ResponseInterceptor)
 export class LeaveBalancesController {
   constructor(private readonly svc: LeaveBalancesService) {}
 

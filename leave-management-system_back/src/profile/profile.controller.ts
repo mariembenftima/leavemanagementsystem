@@ -19,11 +19,13 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ProfileService } from './profile.service';
-import { AuthenticatedRequest } from '../auth/types/authenticated-request';
+import {
+  AuthenticatedRequest,
+  AuthenticatedUser,
+} from '../auth/types/authenticated-request';
 import { EmployeeProfile } from './entities/employee-profile.entity';
 import { Performance } from './entities/performance.entity';
 import { User } from '../users/entities/users.entity';
-import { Activity } from './entities/activity.entity';
 import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 import { CreateProfileDto } from './types/dtos/create-profile.dto';
 import { UserRole } from '../users/types/enums/user-role.enum';
@@ -37,16 +39,6 @@ interface LeaveBalanceItem {
 
 interface LeaveBalanceRecord {
   [key: string]: LeaveBalanceItem;
-}
-
-interface ActivitySummary {
-  id: number;
-  type: string;
-  title: string;
-  description?: string;
-  timeAgo: string;
-  displayDate: string;
-  createdAt: Date;
 }
 
 interface PartialProfile {
@@ -83,7 +75,6 @@ export class ProfileController {
     }
 
     // Create a partial User object for authentication purposes
-    // The profile relationship is not needed for authorization checks
     const user: User = {
       id: authenticatedUser.userId,
       email: authenticatedUser.email,
@@ -98,24 +89,10 @@ export class ProfileController {
       createdAt: new Date(),
       updatedAt: new Date(),
       leaveBalances: [],
-      profile: null as unknown as EmployeeProfile, // ✅ Properly typed as EmployeeProfile
+      profile: null as unknown as EmployeeProfile,
     };
 
     return user;
-  }
-
-  private activityToSummary(activity: Activity): ActivitySummary {
-    return {
-      id: activity.id,
-      type: activity.activityType,
-      title: this.getActivityTitle(activity.activityType),
-      description: activity.description,
-      timeAgo: this.getTimeAgo(activity.createdAt),
-      displayDate: activity.activityDate
-        ? this.formatDate(activity.activityDate)
-        : this.formatDate(activity.createdAt),
-      createdAt: activity.activityDate || activity.createdAt,
-    };
   }
 
   private formatDate(date: Date): string {
@@ -193,11 +170,10 @@ export class ProfileController {
 
     let profileData: EmployeeProfile | PartialProfile | null = null;
     let leaveBalance: LeaveBalanceRecord = {};
-    let recentActivities: ActivitySummary[] = [];
     let performance: Performance | null = null;
 
     try {
-      // ✅ Use ProfileService.getFullProfile() which already gets everything
+      // ✅ Use ProfileService.getFullProfile() which returns simplified activities
       const fullProfileData = await this.profileService.getFullProfile(
         user.userId,
         this.toUserEntity(user),
@@ -206,26 +182,82 @@ export class ProfileController {
       profileData = fullProfileData.profile;
       performance = fullProfileData.performance || null;
 
-      // ✅ Convert activity summaries from the service
-      if (fullProfileData.recentActivities) {
-        recentActivities = fullProfileData.recentActivities.map(
-          (activitySummary: ActivitySummary) => ({
-            id: activitySummary.id,
-            type: activitySummary.type,
-            title: activitySummary.title,
-            description: activitySummary.description || '',
-            timeAgo: this.getTimeAgo(activitySummary.createdAt),
-            displayDate: activitySummary.displayDate,
-            createdAt: activitySummary.createdAt,
-          }),
-        );
-      }
-
-      // Get leave balance
+      // ✅ Get leave balance
       const rawLeaveBalance = await this.leaveBalancesService.findByUserId(
         user.userId,
       );
       leaveBalance = rawLeaveBalance || {};
+
+      // ✅ Transform simplified activities for the dashboard
+      // Service returns: { id, type, description, date, createdAt }
+      // Dashboard needs: { title, description, date }
+      const recentActivities = fullProfileData.recentActivities || [];
+
+      const dashboardData = {
+        user: {
+          name: this.getFullname(profileData, user),
+          email: this.getEmail(profileData, user),
+          role:
+            Array.isArray(user.roles) && user.roles.length > 0
+              ? user.roles[0]
+              : 'Employee',
+          department: profileData?.department || 'Information Technology',
+        },
+        employeeInfo: {
+          department: profileData?.department || 'Information Technology',
+          designation: profileData?.designation || 'Software Developer',
+          joinDate: profileData?.joinDate
+            ? typeof profileData.joinDate === 'string'
+              ? profileData.joinDate
+              : profileData.joinDate.toISOString().split('T')[0]
+            : '2023-01-15',
+          employeeId: profileData?.employeeId || `EMP${user.userId}`,
+          workExperience: this.getWorkExperience(profileData),
+          gender: profileData?.gender || 'Not specified',
+        },
+        contactInfo: {
+          email: this.getEmail(profileData, user),
+          phone: profileData?.phone || '+1234567890',
+          emergencyContact:
+            profileData &&
+            'emergencyContactName' in profileData &&
+            'emergencyContactPhone' in profileData
+              ? `${profileData.emergencyContactName || 'N/A'} - ${profileData.emergencyContactPhone || 'N/A'}`
+              : 'Jane Doe - +1234567891',
+          address: profileData?.address || '123 Main St, City, State',
+        },
+        performance: performance || {
+          attendanceRate: 95,
+          performanceScore: 4.5,
+          activeProjects: 3,
+        },
+        leaveBalance,
+        recentActivities: recentActivities.length
+          ? recentActivities.map((activity) => ({
+              title: this.getActivityTitle(activity.type),
+              description: activity.description || '',
+              date: this.formatDate(new Date(activity.date)),
+            }))
+          : [
+              {
+                title: 'Login',
+                description: 'Logged into system',
+                date: new Date().toISOString(),
+              },
+              {
+                title: 'Profile Update',
+                description: 'Updated profile information',
+                date: new Date(Date.now() - 86400000).toISOString(),
+              },
+              {
+                title: 'Leave Request',
+                description: 'Submitted annual leave request',
+                date: new Date(Date.now() - 172800000).toISOString(),
+              },
+            ],
+      };
+
+      return dashboardData;
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
@@ -235,107 +267,49 @@ export class ProfileController {
       );
 
       // Fallback data
-      leaveBalance = {
-        annual: { total: 25, used: 5, remaining: 20 },
-        sick: { total: 12, used: 2, remaining: 10 },
-        personal: { total: 15, used: 1, remaining: 14 },
+      return {
+        user: {
+          name: user.email || 'Current User',
+          email: user.email || 'user@company.com',
+          role:
+            Array.isArray(user.roles) && user.roles.length > 0
+              ? user.roles[0]
+              : 'Employee',
+          department: 'Information Technology',
+        },
+        employeeInfo: {
+          department: 'Information Technology',
+          designation: 'Software Developer',
+          joinDate: '2023-01-15',
+          employeeId: `EMP${user.userId}`,
+          workExperience: '2 years',
+          gender: 'Not specified',
+        },
+        contactInfo: {
+          email: user.email || 'user@company.com',
+          phone: '+1234567890',
+          emergencyContact: 'Jane Doe - +1234567891',
+          address: '123 Main St, City, State',
+        },
+        performance: {
+          attendanceRate: 95,
+          performanceScore: 4.5,
+          activeProjects: 3,
+        },
+        leaveBalance: {
+          annual: { total: 25, used: 5, remaining: 20 },
+          sick: { total: 12, used: 2, remaining: 10 },
+          personal: { total: 15, used: 1, remaining: 14 },
+        },
+        recentActivities: [
+          {
+            title: 'Login',
+            description: 'Logged into system',
+            date: new Date().toISOString(),
+          },
+        ],
       };
     }
-
-    const getFullname = (): string => {
-      if (profileData && 'user' in profileData && profileData.user?.fullname) {
-        return profileData.user.fullname;
-      }
-      return user.email || 'Current User';
-    };
-
-    const getEmail = (): string => {
-      if (profileData && 'user' in profileData && profileData.user?.email) {
-        return profileData.user.email;
-      }
-      return user.email || 'user@company.com';
-    };
-
-    const getWorkExperience = (): string => {
-      if (!profileData) {
-        return '2 years';
-      }
-
-      if (
-        'yearsOfService' in profileData &&
-        typeof profileData.yearsOfService === 'number'
-      ) {
-        return `${profileData.yearsOfService} years`;
-      }
-
-      return '2 years';
-    };
-
-    const dashboardData = {
-      user: {
-        name: getFullname(),
-        email: getEmail(),
-        role:
-          Array.isArray(user.roles) && user.roles.length > 0
-            ? user.roles[0]
-            : 'Employee',
-        department: profileData?.department || 'Information Technology',
-      },
-      employeeInfo: {
-        department: profileData?.department || 'Information Technology',
-        designation: profileData?.designation || 'Software Developer',
-        joinDate: profileData?.joinDate
-          ? typeof profileData.joinDate === 'string'
-            ? profileData.joinDate
-            : profileData.joinDate.toISOString().split('T')[0]
-          : '2023-01-15',
-        employeeId: profileData?.employeeId || `EMP${user.userId}`,
-        workExperience: getWorkExperience(),
-        gender: profileData?.gender || 'Not specified',
-      },
-      contactInfo: {
-        email: getEmail(),
-        phone: profileData?.phone || '+1234567890',
-        emergencyContact:
-          profileData &&
-          'emergencyContactName' in profileData &&
-          'emergencyContactPhone' in profileData
-            ? `${profileData.emergencyContactName || 'N/A'} - ${profileData.emergencyContactPhone || 'N/A'}`
-            : 'Jane Doe - +1234567891',
-        address: profileData?.address || '123 Main St, City, State',
-      },
-      performance: performance || {
-        attendanceRate: 95,
-        performanceScore: 4.5,
-        activeProjects: 3,
-      },
-      leaveBalance,
-      recentActivities: recentActivities.length
-        ? recentActivities.map((activity) => ({
-            title: activity.title,
-            description: activity.description || '',
-            date: activity.displayDate || activity.createdAt.toISOString(),
-          }))
-        : [
-            {
-              title: 'Login',
-              description: 'Logged into system',
-              date: new Date().toISOString(),
-            },
-            {
-              title: 'Profile Update',
-              description: 'Updated profile information',
-              date: new Date(Date.now() - 86400000).toISOString(),
-            },
-            {
-              title: 'Leave Request',
-              description: 'Submitted annual leave request',
-              date: new Date(Date.now() - 172800000).toISOString(),
-            },
-          ],
-    };
-
-    return dashboardData;
   }
 
   @Get('me')
@@ -396,9 +370,50 @@ export class ProfileController {
     }
 
     return this.profileService.createProfile(
-      requester.id,
+      userId,
       createProfileDto,
       this.toUserEntity(requester),
     );
+  }
+
+  // ========================================
+  // PRIVATE HELPER METHODS
+  // ========================================
+
+  private getFullname(
+    profileData: EmployeeProfile | PartialProfile | null,
+    user: AuthenticatedUser,
+  ): string {
+    if (profileData && 'user' in profileData && profileData.user?.fullname) {
+      return profileData.user.fullname;
+    }
+    return user.email || 'Current User';
+  }
+
+  private getEmail(
+    profileData: EmployeeProfile | PartialProfile | null,
+    user: AuthenticatedUser,
+  ): string {
+    if (profileData && 'user' in profileData && profileData.user?.email) {
+      return profileData.user.email;
+    }
+    return user.email || 'user@company.com';
+  }
+
+  private getWorkExperience(
+    profileData: EmployeeProfile | PartialProfile | null,
+  ): string {
+    if (!profileData) {
+      return '2 years';
+    }
+
+    if (
+      'yearsOfService' in profileData &&
+      typeof profileData.yearsOfService === 'number'
+    ) {
+      return `${profileData.yearsOfService} years`;
+    }
+
+    return '2 years';
   }
 }
