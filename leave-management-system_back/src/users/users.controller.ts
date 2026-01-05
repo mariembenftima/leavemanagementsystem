@@ -43,7 +43,7 @@ export class UsersController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.HR)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get all users (Admin/HR only)' })
   @ApiResponse({ status: 200, description: 'Users retrieved successfully' })
   async getAllUsers(
@@ -87,7 +87,7 @@ export class UsersController {
   @Get('stats')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.HR)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get user statistics (Admin/HR only)' })
   async getUserStats() {
     const stats = await this.usersService.getUserStats();
@@ -100,7 +100,7 @@ export class UsersController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get user by ID' })
   async getUserById(@Param('id', ParseUUIDPipe) id: string) {
     // ✅ FIX: Remove 'new' - just use ParseUUIDPipe directly
@@ -129,7 +129,7 @@ export class UsersController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete user (Admin only)' })
   async deleteUser(@Param('id', ParseUUIDPipe) id: string) {
     // ✅ FIX: Remove 'new'
@@ -142,7 +142,7 @@ export class UsersController {
 
   @Post(':id/profile-pic')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Upload profile picture' })
   async uploadProfilePicture(

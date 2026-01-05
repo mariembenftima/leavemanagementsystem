@@ -1,14 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  LeaveRequest,
-  LeaveRequestStatus,
-} from './entities/leave-request.entity';
+import { LeaveRequest } from './entities/leave-request.entity';
 import { User } from '../users/entities/users.entity';
 import { EmailNotificationService } from '../notifications/email-notification.service';
 import { LeaveTypeEntity } from 'src/leave-types/entities/leave-type.entity';
 import { CreateLeaveRequestDto } from './types/dtos/create-leave-request.dto';
+import { LeaveRequestStatus } from './types/enums/leave-request-status.enum';
 
 @Injectable()
 export class LeaveRequestsService {
@@ -102,7 +100,6 @@ export class LeaveRequestsService {
 
       console.log(`✅ Fetched ${leaveRequests.length} leave requests`);
       return leaveRequests;
-
     } catch (error) {
       console.error('❌ ERROR in getAllLeaveRequests:', error);
       console.error('Error message:', error.message);

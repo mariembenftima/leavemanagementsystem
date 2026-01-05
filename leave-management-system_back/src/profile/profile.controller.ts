@@ -154,7 +154,7 @@ export class ProfileController {
 
   @Get('dashboard')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get dashboard data for the current user' })
   @ApiResponse({
     status: 200,
@@ -314,7 +314,7 @@ export class ProfileController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({
     status: 200,
@@ -331,7 +331,7 @@ export class ProfileController {
 
   @Get(':userId')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get a profile by user ID (admin/HR)' })
   @ApiResponse({
     status: 200,
@@ -351,7 +351,7 @@ export class ProfileController {
 
   @Post(':userId/employee-profile')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create employee profile for a user' })
   @ApiResponse({

@@ -1,11 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
-import {
-  LeaveRequest,
-  LeaveRequestStatus,
-} from '../leave-requests/entities/leave-request.entity';
+import { LeaveRequest } from '../leave-requests/entities/leave-request.entity';
 import { User } from '../users/entities/users.entity';
+import { LeaveRequestStatus } from 'src/leave-requests/types/enums/leave-request-status.enum';
 
 export interface EmailTemplate {
   subject: string;
@@ -109,12 +107,6 @@ export class EmailNotificationService {
         statusColor = '#ef4444';
         statusText = 'Leave Request Rejected';
         actionText = 'Your leave request has been rejected.';
-        break;
-      case LeaveRequestStatus.CANCELLED:
-        subject = `Leave Request Cancelled - ${employee.fullname}`;
-        statusColor = '#f59e0b';
-        statusText = 'Leave Request Cancelled';
-        actionText = 'Your leave request has been cancelled.';
         break;
       default:
         subject = `Leave Request Update - ${employee.fullname}`;

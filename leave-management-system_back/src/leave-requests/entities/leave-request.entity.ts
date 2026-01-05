@@ -9,13 +9,7 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
 import { LeaveTypeEntity } from '../../leave-types/entities/leave-type.entity';
-
-export enum LeaveRequestStatus {
-  PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
-  CANCELLED = 'CANCELLED',
-}
+import { LeaveRequestStatus } from '../types/enums/leave-request-status.enum';
 
 @Entity('leave_requests')
 export class LeaveRequest {

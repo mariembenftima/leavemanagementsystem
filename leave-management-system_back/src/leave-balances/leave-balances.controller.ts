@@ -44,7 +44,7 @@ export class LeaveBalancesController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: "Get current user's aggregated leave balance summary",
   })
@@ -62,7 +62,7 @@ export class LeaveBalancesController {
 
   @Get('user/:id')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Get full leave balances (detailed records) for a specific user',
   })

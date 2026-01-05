@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,12 +18,16 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { LeaveRequestsService } from './leave-requests.service';
-import { LeaveRequestStatus } from './entities/leave-request.entity';
 import { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { CreateLeaveRequestDto } from './types/dtos/create-leave-request.dto';
+import { UpdateLeaveStatusDto } from './types/dtos/update-leave-status.dto';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { RolesGuard } from 'src/users/roleguard';
+import { Roles } from 'src/users/roledecorator';
+import { UserRole } from 'src/users/types/enums/user-role.enum';
 
 @ApiTags('leave-requests')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @Controller('leave-requests')
 export class LeaveRequestsController {
   constructor(private readonly leaveRequestsService: LeaveRequestsService) {}
@@ -77,9 +82,12 @@ export class LeaveRequestsController {
     status: 200,
     description: 'Leave request status updated successfully',
   })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.HR, UserRole.ADMIN)
+  @ApiBearerAuth('JWT-auth')
   updateLeaveRequestStatus(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateStatusDto: { status: LeaveRequestStatus },
+    @Body() updateStatusDto: UpdateLeaveStatusDto,
     @Request() req: AuthenticatedRequest,
   ) {
     return this.leaveRequestsService.updateLeaveRequestStatus(
