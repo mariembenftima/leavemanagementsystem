@@ -1,5 +1,6 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal } from '@angular/core';  // ✅ ADDED OnDestroy
 import { Router } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';  
 import { ApiService } from '../../../services/api.service';
 import { Activity } from '../../../../types/activity.model';
 import { DataMapperService } from '../../../../helpers/data-mapper.service';
@@ -20,7 +21,7 @@ interface DashboardStats {
   templateUrl: './admin-dashboard.html',
   styleUrls: ['./admin-dashboard.css'],
 })
-export class AdminDashboard implements OnInit {
+export class AdminDashboard implements OnInit, OnDestroy {
   userCount = signal<number>(0);
   pendingCount = signal<number>(0);
   approvedCount = signal<number>(0);
@@ -38,6 +39,8 @@ export class AdminDashboard implements OnInit {
 
   recentActivities: Activity[] = [];
 
+  private destroy$ = new Subject<void>(); 
+
   constructor(
     private router: Router,
     private api: ApiService,
@@ -48,51 +51,68 @@ export class AdminDashboard implements OnInit {
     this.loadDashboardData();
   }
 
+  ngOnDestroy(): void { 
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   private loadDashboardData(): void {
-    this.api.getAllUsersCount().subscribe({
-      next: (count) => this.userCount.set(count),
-      error: (err) => console.error('Failed to load user count', err),
-    });
+    this.api.getAllUsersCount()
+      .pipe(takeUntil(this.destroy$))  
+      .subscribe({
+        next: (count) => this.userCount.set(count),
+        error: (err) => console.error('Failed to load user count', err),
+      });
 
-    this.api.getAllPendingRequests().subscribe({
-      next: (res) => {
-        this.pendingCount.set(res);
-        this.stats.pendingRequests = res;
-      },
-    });
+    this.api.getAllPendingRequests()
+      .pipe(takeUntil(this.destroy$)) 
+      .subscribe({
+        next: (res) => {
+          this.pendingCount.set(res);
+          this.stats.pendingRequests = res;
+        },
+      });
 
-    this.api.getAllRejectedRequests().subscribe({
-      next: (res) => {
-        this.rejectedCount.set(res);
-        this.stats.rejectedRequests = res;
-      },
-    });
+    this.api.getAllRejectedRequests()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.rejectedCount.set(res);
+          this.stats.rejectedRequests = res;
+        },
+      });
 
-    this.api.getAllApprovedRequests().subscribe({
-      next: (res) => {
-        this.approvedCount.set(res);
-        this.stats.approvedRequests = res;
-      },
-    });
+    this.api.getAllApprovedRequests()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.approvedCount.set(res);
+          this.stats.approvedRequests = res;
+        },
+      });
 
-    this.api.getLeaveTypes().subscribe({
-      next: (res) => {
-        this.leaveTypeCount.set(res.length);
-        this.stats.totalLeaveTypes = res.length;
-      },
-      error: (err) => console.error('Failed to load leave types', err),
-    });
+    this.api.getLeaveTypes()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.leaveTypeCount.set(res.length);
+          this.stats.totalLeaveTypes = res.length;
+        },
+        error: (err) => console.error('Failed to load leave types', err),
+      });
 
-    this.api.getHolidays().subscribe({
-      next: (res) => {
-        const activeHolidays = res.filter(
-          (h: Holiday) => new Date(h.date) > new Date()
-        );
-        this.holidayCount.set(activeHolidays.length);
-        this.stats.activeHolidays = activeHolidays.length;
-      },
-      error: (err) => console.error('Failed to load holidays', err),
-    });
+    this.api.getHolidays()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          const activeHolidays = res.filter(
+            (h: Holiday) => new Date(h.date) > new Date()
+          );
+          this.holidayCount.set(activeHolidays.length);
+          this.stats.activeHolidays = activeHolidays.length;
+        },
+        error: (err) => console.error('Failed to load holidays', err),
+      });
 
     this.loadRecentActivities();
   }
@@ -100,6 +120,7 @@ export class AdminDashboard implements OnInit {
   private loadRecentActivities(): void {
     this.api
       .getDashboardData()
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {
           const mapped = this.mapper.fromApiArray<Activity>(res.activities || []);
@@ -115,7 +136,7 @@ export class AdminDashboard implements OnInit {
 
   getActivityIcon(type: string): string {
     switch (type) {
-      case 'leave_request': return '📝';
+      case 'leave_request': return '📄';
       case 'user_created': return '👤';
       case 'holiday_added': return '🎉';
       default: return '📋';
