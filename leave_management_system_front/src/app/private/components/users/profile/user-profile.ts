@@ -8,6 +8,7 @@ import {
   ElementRef,
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../../services/auth.service';
 import { LeaveBalance } from '../../../../types/leave-balance.model';
 import { DataMapperService } from '../../../../helpers/data-mapper.service';
@@ -33,7 +34,7 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
 
   private autoSaveTimer?: number;
   private clockInterval?: number;
-
+  private destroy$ = new Subject<void>(); 
   constructor(
     private http: HttpClient,
     private mapper: DataMapperService,
@@ -69,22 +70,25 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private loadEmployeeProfile(): void {
-    this.apiService.getProfile().subscribe({  // ✅ No userId needed
-      next: (profileData) => {
-        console.log('✅ Profile:', profileData);
-        if (profileData) {
-          this.employeeData = profileData;
+    this.apiService.getProfile()
+      .pipe(takeUntil(this.destroy$)) 
+      .subscribe({
+        next: (profileData) => {
+          console.log('✅ Profile:', profileData);
+          if (profileData) {
+            this.employeeData = profileData;
+            this.isLoading = false;
+          }
+        },
+        error: (err) => {
+          console.error('❌ Profile error:', err);
+          this.hasError = true;
           this.isLoading = false;
-        }
-      },
-      error: (err) => {
-        console.error('❌ Profile error:', err);
-        this.hasError = true;
-        this.isLoading = false;
-      },
-    });
+        },
+      });
   }
-getAge(): number | null {
+
+  getAge(): number | null {
     if (!this.employeeData?.dateOfBirth) {
       return null;
     }
@@ -102,17 +106,20 @@ getAge(): number | null {
   }
 
   private loadLeaveBalances(): void {
-    this.apiService.getMyLeaveBalances().subscribe({  // ✅ Use new method
-      next: (balances) => {
-        console.log('✅ Balances:', balances);
-        this.leaveBalances = balances;
-      },
-      error: (err) => {
-        console.error('❌ Balances error:', err);
-        this.leaveBalances = {};
-      },
-    });
+    this.apiService.getMyLeaveBalances()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (balances) => {
+          console.log('✅ Balances:', balances);
+          this.leaveBalances = balances;
+        },
+        error: (err) => {
+          console.error('❌ Balances error:', err);
+          this.leaveBalances = {};
+        },
+      });
   }
+
   ngAfterViewInit(): void {
     document.querySelectorAll('.modal').forEach((modal) => {
       modal.addEventListener('click', (e: Event) => {
@@ -124,6 +131,7 @@ getAge(): number | null {
     this.updateClock();
     this.clockInterval = window.setInterval(() => this.updateClock(), 1000);
   }
+
   getYearsOfExperience(): number {
     if (!this.employeeData?.hireDate && !this.employeeData?.hireDate) {
       return 0;
@@ -144,6 +152,10 @@ getAge(): number | null {
   }
 
   ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    
+    // Existing cleanup
     if (this.clockInterval) clearInterval(this.clockInterval);
     if (this.autoSaveTimer) clearTimeout(this.autoSaveTimer);
   }
@@ -325,7 +337,8 @@ getAge(): number | null {
       input.addEventListener('input', () => {
         if (this.autoSaveTimer) clearTimeout(this.autoSaveTimer);
         this.autoSaveTimer = window.setTimeout(() => {
-          // Optional: API call to save draft
+          this.showNotification('Auto-saved changes.');
+          
         }, 2000);
       });
     });
