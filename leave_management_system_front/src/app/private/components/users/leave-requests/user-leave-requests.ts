@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';  // ✅ ADDED OnDestroy
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Subject, takeUntil } from 'rxjs';  // ✅ ADDED for memory leak fix
 import { ToastService } from '../../../../shared/services/toast.service';
 import { ApiService } from '../../../services/api.service';
 import { EmployeeProfile } from '../../../../types/employee-profile.model';
@@ -31,7 +32,7 @@ interface UpcomingLeave {
   styleUrls: ['./user-leave-requests.css'],
   standalone: false
 })
-export class LeaveRequestComponent implements OnInit {
+export class LeaveRequestComponent implements OnInit, OnDestroy { 
   leaveRequestForm: FormGroup;
   isSubmitting = false;
   attachedFiles: File[] = [];
@@ -39,6 +40,7 @@ export class LeaveRequestComponent implements OnInit {
   isLoadingUser = false;
   allowedFileTypes: string[] = ['.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg'];
 
+  private destroy$ = new Subject<void>(); 
 
   minDate = new Date().toISOString().split('T')[0];
 
@@ -67,6 +69,11 @@ export class LeaveRequestComponent implements OnInit {
   ngOnInit(): void {
     this.loadCurrentEmployee();
     this.setupFormValidation();
+  }
+
+  ngOnDestroy(): void { 
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private async loadCurrentEmployee(): Promise<void> {
@@ -106,14 +113,18 @@ export class LeaveRequestComponent implements OnInit {
   }
 
   private setupFormValidation(): void {
-    // Add cross-field validation for dates
-    this.leaveRequestForm.get('endDate')?.valueChanges.subscribe(() => {
-      this.validateDateRange();
-    });
 
-    this.leaveRequestForm.get('startDate')?.valueChanges.subscribe(() => {
-      this.validateDateRange();
-    });
+    this.leaveRequestForm.get('endDate')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.validateDateRange();
+      });
+
+    this.leaveRequestForm.get('startDate')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.validateDateRange();
+      });
   }
 
   private validateDateRange(): void {
@@ -130,7 +141,7 @@ export class LeaveRequestComponent implements OnInit {
     if (input.files) {
       const files = Array.from(input.files);
 
-      // Validate file types and sizes
+
       const validFiles = files.filter(file => {
         const extension = '.' + file.name.split('.').pop()?.toLowerCase();
         const isValidType = this.allowedFileTypes.includes(extension);
@@ -208,13 +219,13 @@ export class LeaveRequestComponent implements OnInit {
 
       try {
         const payload = {
-          leaveType: this.leaveRequestForm.value.type,          // ✅ backend expects "leaveType"
-          startDate: this.leaveRequestForm.value.startDate,      // ✅ must be ISO date string
+          leaveType: this.leaveRequestForm.value.type,        
+          startDate: this.leaveRequestForm.value.startDate,      
           endDate: this.leaveRequestForm.value.endDate,
           reason: this.leaveRequestForm.value.reason,
           emergencyContact: this.leaveRequestForm.value.emergencyContact,
           managerEmail: this.leaveRequestForm.value.managerEmail,
-          isHalfDay: !!this.leaveRequestForm.value.halfDay,      // ✅ ensure boolean not string
+          isHalfDay: !!this.leaveRequestForm.value.halfDay,     
         };
 
         console.log('📤 Sending payload to API:', payload);
@@ -280,15 +291,15 @@ export class LeaveRequestComponent implements OnInit {
   }
 
   onHalfDayToggle(): void {
-    // Handle half day toggle logic
+
     console.log('Half day toggle clicked');
   }
 
   onStartDateChange(): void {
-    // Handle start date change logic
+
     const startDate = this.leaveRequestForm.get('startDate')?.value;
     if (startDate) {
-      // Update minimum end date to be start date
+
       this.minDate = startDate;
     }
   }
@@ -297,7 +308,7 @@ export class LeaveRequestComponent implements OnInit {
     return this.leaveRequestForm.invalid && (this.leaveRequestForm.dirty || this.leaveRequestForm.touched);
   }
 
-  // Drag and drop functionality
+
   onDragOver(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
@@ -327,7 +338,6 @@ export class LeaveRequestComponent implements OnInit {
   private handleFiles(files: FileList): void {
     const fileArray = Array.from(files);
 
-    // Validate file types and sizes
     const validFiles = fileArray.filter(file => {
       const extension = '.' + file.name.split('.').pop()?.toLowerCase();
       const isValidType = this.allowedFileTypes.includes(extension);

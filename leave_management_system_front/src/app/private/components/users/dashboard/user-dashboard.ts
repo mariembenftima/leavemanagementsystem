@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';  // ✅ ADDED OnDestroy
+import { Subject, takeUntil } from 'rxjs';  // ✅ ADDED for memory leak fix
 import { DashboardData } from '../../../../types/dashboard-data.type';
 import { Activity } from '../../../../types/activity.model';
 import { Performance } from '../../../../types/performance.model';
@@ -15,10 +16,12 @@ import { EmployeeProfile } from '../../../../types/employee-profile.model';
   templateUrl: './user-dashboard.html',
   styleUrls: ['./user-dashboard.css'],
 })
-export class UserDashboard implements OnInit {
+export class UserDashboard implements OnInit, OnDestroy {  // ✅ ADDED OnDestroy
   dashboardData: DashboardData | null = null;
   isLoading = true;
   hasError = false;
+
+  private destroy$ = new Subject<void>();  // ✅ ADDED for memory leak fix
 
   constructor(
     private http: HttpClient,
@@ -30,6 +33,11 @@ export class UserDashboard implements OnInit {
     this.loadDashboardData();
   }
 
+  ngOnDestroy(): void {  // ✅ ADDED for memory leak fix
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   private loadDashboardData(): void {
     const authToken = localStorage.getItem('authToken');
     const userData = localStorage.getItem('currentUser');
@@ -38,18 +46,19 @@ export class UserDashboard implements OnInit {
     console.log('👤 User data exists:', userData ? 'Yes' : 'No');
     console.log('🔐 Token preview:', authToken ? authToken.substring(0, 50) + '...' : 'NULL');
 
-    this.apiService.getDashboardData().subscribe({
-
-      next: (data) => {
-        this.dashboardData = data;
-        this.isLoading = false;
-      },
-      error: (err) => {
-        console.error('Failed to load dashboard data:', err);
-        this.hasError = true;
-        this.isLoading = false;
-      },
-    });
+    this.apiService.getDashboardData()
+      .pipe(takeUntil(this.destroy$)) 
+      .subscribe({
+        next: (data) => {
+          this.dashboardData = data;
+          this.isLoading = false;
+        },
+        error: (err) => {
+          console.error('Failed to load dashboard data:', err);
+          this.hasError = true;
+          this.isLoading = false;
+        },
+      });
   }
   
 
