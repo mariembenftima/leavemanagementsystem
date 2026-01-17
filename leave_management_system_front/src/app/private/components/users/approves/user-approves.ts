@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core'; 
+import { Subject, takeUntil } from 'rxjs'; 
 import { ApiService } from '../../../services/api.service';
 import { AuthService } from '../../../services/auth.service';
 
@@ -32,7 +33,7 @@ interface FilterOptions {
   templateUrl: './user-approves.html',
   styleUrls: ['./user-approves.css'],
 })
-export class UserApproves implements OnInit {
+export class UserApproves implements OnInit, OnDestroy {
   leaveStats: LeaveStatistic[] = [];
 
   leaveAllowance = 0;
@@ -63,6 +64,8 @@ export class UserApproves implements OnInit {
   sortDirection: 'asc' | 'desc' = 'asc';
   selectedRequests: string[] = [];
 
+  private destroy$ = new Subject<void>(); 
+
   constructor(
     private apiService: ApiService,
     private authService: AuthService
@@ -72,6 +75,11 @@ export class UserApproves implements OnInit {
     this.loadData();
   }
 
+  ngOnDestroy(): void {  
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   private loadData(): void {
     this.loadLeaveRequests();
     this.loadLeaveStatistics();
@@ -79,25 +87,27 @@ export class UserApproves implements OnInit {
   }
 
   private loadLeaveRequests(): void {
-    this.apiService.getLeaveRequests().subscribe({
-      next: (response: any) => {
-        if (response.success && response.data) {
-          this.leaveRequests = response.data.map((request: any) => ({
-            id: request.id,
-            employee: `${request.user?.firstName || ''} ${request.user?.lastName || ''}`.trim() || 'Unknown',
-            startDate: this.formatDate(request.startDate),
-            endDate: this.formatDate(request.endDate),
-            duration: this.calculateDuration(request.startDate, request.endDate),
-            status: this.mapStatus(request.status),
-            leaveType: request.leaveType?.name || 'Unknown',
-          }));
-          this.filteredRequests = [...this.leaveRequests];
+    this.apiService.getLeaveRequests()
+      .pipe(takeUntil(this.destroy$)) 
+      .subscribe({
+        next: (response: any) => {
+          if (response.success && response.data) {
+            this.leaveRequests = response.data.map((request: any) => ({
+              id: request.id,
+              employee: `${request.user?.firstName || ''} ${request.user?.lastName || ''}`.trim() || 'Unknown',
+              startDate: this.formatDate(request.startDate),
+              endDate: this.formatDate(request.endDate),
+              duration: this.calculateDuration(request.startDate, request.endDate),
+              status: this.mapStatus(request.status),
+              leaveType: request.leaveType?.name || 'Unknown',
+            }));
+            this.filteredRequests = [...this.leaveRequests];
+          }
+        },
+        error: (error) => {
+          console.error('Error loading leave requests:', error);
         }
-      },
-      error: (error) => {
-        console.error('Error loading leave requests:', error);
-      }
-    });
+      });
   }
 
   private loadLeaveStatistics(): void {
@@ -139,18 +149,20 @@ export class UserApproves implements OnInit {
   }
 
   private loadLeaveBalance(): void {
-    this.apiService.getDashboardData().subscribe({
-      next: (response: any) => {
-        if (response.success && response.data?.leaveBalance) {
-          const balance = response.data.leaveBalance;
-          this.leaveAllowance = balance.annual?.total || 0;
-          this.leaveUsed = balance.annual?.used || 0;
+    this.apiService.getDashboardData()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: any) => {
+          if (response.success && response.data?.leaveBalance) {
+            const balance = response.data.leaveBalance;
+            this.leaveAllowance = balance.annual?.total || 0;
+            this.leaveUsed = balance.annual?.used || 0;
+          }
+        },
+        error: (error) => {
+          console.error('Error loading leave balance:', error);
         }
-      },
-      error: (error) => {
-        console.error('Error loading leave balance:', error);
-      }
-    });
+      });
   }
 
   private formatDate(dateString: string): string {
