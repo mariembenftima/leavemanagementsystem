@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnInit, OnDestroy } from '@angular/core'; 
+import { Subject, takeUntil } from 'rxjs';  
 import { UsersService } from './services/users.service';
 import { User } from '../../../../types/user.model';
+import { Router } from '@angular/router';
 
 export interface PaginationData {
   total: number;
@@ -16,10 +17,9 @@ export interface PaginationData {
   templateUrl: './users.component.html',
   styleUrls: ['./users.component.css']
 })
-export class UsersComponent implements OnInit {
+export class UsersComponent implements OnInit, OnDestroy {  
   users: User[] = [];
-  Math = Math; // ✅ Expose Math to template
-
+  Math = Math; 
   loading = false;
   selectedUser: User | null = null;
 
@@ -41,6 +41,8 @@ export class UsersComponent implements OnInit {
 
   availableRoles = ['ADMIN', 'HR', 'MANAGER', 'EMPLOYEE'];
 
+  private destroy$ = new Subject<void>(); 
+
   constructor(
     private usersService: UsersService,
     private router: Router
@@ -48,6 +50,11 @@ export class UsersComponent implements OnInit {
 
   ngOnInit(): void {
     this.fetchUsers();
+  }
+
+  ngOnDestroy(): void { 
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   fetchUsers(): void {
@@ -60,51 +67,53 @@ export class UsersComponent implements OnInit {
       hasProfile: this.profileFilter || undefined
     };
 
-    this.usersService.getAllUsers(params).subscribe({
-      next: (response) => {
-        console.log('✅ Received response:', response);
+    this.usersService.getAllUsers(params)
+      .pipe(takeUntil(this.destroy$)) 
+      .subscribe({
+        next: (response) => {
+          console.log('✅ Received response:', response);
 
-        if (Array.isArray(response.data)) {
-          this.users = response.data;
-        } else {
-          console.error('Expected array but got:', typeof response.data);
+          if (Array.isArray(response.data)) {
+            this.users = response.data;
+          } else {
+            console.error('Expected array but got:', typeof response.data);
+            this.users = [];
+          }
+
+
+          if (response.pagination) {
+            this.pagination = response.pagination;
+          } else {
+
+            this.pagination = {
+              total: this.users.length,
+              page: 1,
+              limit: 10,
+              totalPages: Math.ceil(this.users.length / 10)
+            };
+          }
+          
+          this.loading = false;
+        },
+        error: (error) => {
+          console.error('❌ Error fetching users:', error);
+          alert('Failed to fetch users. Please check your connection.');
           this.users = [];
-        }
+          
 
-        // ✅ Ensure pagination exists before assigning
-        if (response.pagination) {
-          this.pagination = response.pagination;
-        } else {
-          // ✅ Fallback pagination if not provided
           this.pagination = {
-            total: this.users.length,
+            total: 0,
             page: 1,
             limit: 10,
-            totalPages: Math.ceil(this.users.length / 10)
+            totalPages: 0
           };
+          
+          this.loading = false;
         }
-        
-        this.loading = false;
-      },
-      error: (error) => {
-        console.error('❌ Error fetching users:', error);
-        alert('Failed to fetch users. Please check your connection.');
-        this.users = [];
-        
-        // ✅ Reset pagination on error
-        this.pagination = {
-          total: 0,
-          page: 1,
-          limit: 10,
-          totalPages: 0
-        };
-        
-        this.loading = false;
-      }
-    });
+      });
   }
 
-  // ✅ Statistics Helper Methods
+
   getActiveUsersCount(): number {
     return this.users.filter(user => user.isActive).length;
   }
@@ -117,7 +126,7 @@ export class UsersComponent implements OnInit {
     return this.users.filter(user => user.hasProfile).length;
   }
 
-  // Search and Filter Methods
+
   onSearch(): void {
     this.pagination.page = 1;
     this.fetchUsers();
@@ -140,7 +149,7 @@ export class UsersComponent implements OnInit {
     this.showFilters = !this.showFilters;
   }
 
-  // User Actions
+
   activateUser(userId: string, activate: boolean): void {
     const action = activate ? 'activate' : 'deactivate';
     
@@ -148,35 +157,39 @@ export class UsersComponent implements OnInit {
       return;
     }
 
-    this.usersService.updateUserStatus(userId, activate).subscribe({
-      next: () => {
-        alert(`User ${activate ? 'activated' : 'deactivated'} successfully`);
-        this.fetchUsers();
-      },
-      error: (error) => {
-        console.error('Error updating user status:', error);
-        alert('Failed to update user status');
-      }
-    });
+    this.usersService.updateUserStatus(userId, activate)
+      .pipe(takeUntil(this.destroy$)) 
+      .subscribe({
+        next: () => {
+          alert(`User ${activate ? 'activated' : 'deactivated'} successfully`);
+          this.fetchUsers();
+        },
+        error: (error) => {
+          console.error('Error updating user status:', error);
+          alert('Failed to update user status');
+        }
+      });
   }
 
   deleteUser(): void {
     if (!this.selectedUser) return;
 
-    this.usersService.deleteUser(this.selectedUser.id).subscribe({
-      next: () => {
-        alert('User deleted successfully');
-        this.closeDeleteModal();
-        this.fetchUsers();
-      },
-      error: (error) => {
-        console.error('Error deleting user:', error);
-        alert('Failed to delete user');
-      }
-    });
+    this.usersService.deleteUser(this.selectedUser.id)
+      .pipe(takeUntil(this.destroy$)) 
+      .subscribe({
+        next: () => {
+          alert('User deleted successfully');
+          this.closeDeleteModal();
+          this.fetchUsers();
+        },
+        error: (error) => {
+          console.error('Error deleting user:', error);
+          alert('Failed to delete user');
+        }
+      });
   }
 
-  // Modal Management
+
   openRoleModal(user: User): void {
     this.selectedUser = user;
     this.showRoleModal = true;
@@ -212,7 +225,6 @@ export class UsersComponent implements OnInit {
     this.closeCreateProfileModal();
   }
 
-  // Pagination Methods
   goToPage(page: number): void {
     this.pagination.page = page;
     this.fetchUsers();
@@ -254,7 +266,6 @@ export class UsersComponent implements OnInit {
     );
   }
 
-  // UI Helper Methods
   getRoleBadgeClass(role: string): string {
     const classes: { [key: string]: string } = {
       'ADMIN': 'badge-danger',
@@ -275,7 +286,6 @@ export class UsersComponent implements OnInit {
       .substring(0, 2);
   }
 
-  // Navigation (if needed)
   navigateTo(route: string): void {
     this.router.navigate([route]);
   }
