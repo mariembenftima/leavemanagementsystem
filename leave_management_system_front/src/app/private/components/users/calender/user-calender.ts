@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';  
 import { Router } from '@angular/router';
-import { lastValueFrom } from 'rxjs';
+import { Subject, takeUntil, lastValueFrom } from 'rxjs'; 
 import { ApiService, LeaveRequest } from '../../../services/api.service';
 import { AuthService } from '../../../services/auth.service';
 import { Holiday } from '../../../../types/holiday.model';
@@ -37,7 +37,7 @@ interface CalendarDay {
   styleUrls: ['./user-calender.css'],
   standalone: false,
 })
-export class UserCalender implements OnInit {
+export class UserCalender implements OnInit, OnDestroy {  // ✅ ADDED OnDestroy
   currentDate = new Date();
   currentMonth = this.currentDate.getMonth(); // 0-based
   currentYear = this.currentDate.getFullYear();
@@ -61,6 +61,8 @@ export class UserCalender implements OnInit {
   holidays : Holiday[] = [];
   myLeaveRequests: LeaveRequest[] = [];
 
+  private destroy$ = new Subject<void>(); 
+
   constructor(
     private router: Router,
     private apiService: ApiService,
@@ -69,6 +71,11 @@ export class UserCalender implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.refreshCalendar();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   async refreshCalendar(): Promise<void> {
@@ -83,24 +90,24 @@ export class UserCalender implements OnInit {
     }
   }
 
-private async loadCalendarData(): Promise<void> {
-  try {
-    const [events, holidays, leaves] = await Promise.all([
-      lastValueFrom(this.apiService.getCalendarEvents(this.currentMonth + 1, this.currentYear)),
-      lastValueFrom(this.apiService.getHolidays(this.currentYear)),
-      lastValueFrom(this.apiService.getLeaveRequests())
-    ]);
+  private async loadCalendarData(): Promise<void> {
+    try {
+      const [events, holidays, leaves] = await Promise.all([
+        lastValueFrom(this.apiService.getCalendarEvents(this.currentMonth + 1, this.currentYear)),
+        lastValueFrom(this.apiService.getHolidays(this.currentYear)),
+        lastValueFrom(this.apiService.getLeaveRequests())
+      ]);
 
-    this.events = this.processCalendarEvents(events);
-    this.holidays = holidays;
-    this.myLeaveRequests = leaves;
+      this.events = this.processCalendarEvents(events);
+      this.holidays = holidays;
+      this.myLeaveRequests = leaves;
 
-    this.addHolidaysToCalendar(holidays);
-    this.addLeaveRequestsToCalendar(leaves);
-  } catch (err) {
-    console.error('Failed to fetch calendar data:', err);
+      this.addHolidaysToCalendar(holidays);
+      this.addLeaveRequestsToCalendar(leaves);
+    } catch (err) {
+      console.error('Failed to fetch calendar data:', err);
+    }
   }
-}
 
 
   private processCalendarEvents(apiEvents: any[]): CalendarEvent[] {
