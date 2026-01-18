@@ -1,18 +1,61 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { map, Observable } from 'rxjs';
-import { DataMapperService } from '../../helpers/data-mapper.service';
-import { DashboardData } from '../../types/dashboard-data.type';
-import { LeaveType } from '../types/user/leaveRequestsType/leave-type.model';
-import { LeaveRequest } from '../../types/leave-request.model';
-import { Holiday } from '../../types/holiday.model';
-import { User } from '../../types/user.model';
-import { ApiResponse } from '../../types/api-response.type';
-import { Team } from '../../types/team.model';
-import { LeaveBalance } from '../../types/leave-balance.model';
-import { EmployeeProfile } from '../../types/employee-profile.model';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment.development';
+import { DataMapperService } from '../../helpers/data-mapper.service';
+import { Holiday } from '../../types/holiday.model';
+import { Activity } from '../../types/activity.model';
+import { ApiResponse } from '../../types/api-response.type';
+import { DashboardData } from '../../types/dashboard-data.type';
+import { Team } from '../../types/team.model';
+import { User } from '../../types/user.model';
+import { LeaveBalance } from '../../types/leave-balance.model';
 
+interface LeaveRequest {
+  id: string;
+  leaveTypeId: number;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+  is_half_day?: boolean;
+  emergency_contact?: string;
+  manager_email?: string;
+  totalDays: number;
+  status?: string;
+  attachment?: File;
+  user?: {
+    firstName?: string;
+    lastName?: string;
+  };
+  leaveType?: {
+    name?: string;
+  };
+}
+
+interface LeaveType {
+  id: number;
+  name: string;
+  description?: string;
+  maxDays?: number;
+  requiresApproval?: boolean;
+}
+
+
+interface AdminDashboardData {
+  userCount: number;
+  pendingRequests: number;
+  approvedRequests: number;
+  rejectedRequests: number;
+  totalLeaveTypes: number;
+  holidays: Holiday[];
+  activities: Activity[];
+}
+
+interface LeaveRequestsWithBalanceData {
+  requests: LeaveRequest[];
+  leaveBalance: any; 
+}
 
 @Injectable({
   providedIn: 'root',
@@ -20,40 +63,19 @@ import { environment } from '../../../environments/environment.development';
 export class ApiService {
   private apiUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient, private mapper: DataMapperService) { }
+  constructor(
+    private http: HttpClient,
+    private mapper: DataMapperService
+  ) {}
 
-  getProfile(): Observable<EmployeeProfile> {
-    return this.http.get<any>(`${this.apiUrl}/profile/me`).pipe(
-      map((res) => {
-        console.log('📥 Profile Response:', res);
+  updateProfile(data: any): Observable<any> {
+    return this.http.patch<ApiResponse<any>>(`${this.apiUrl}/profile`, data);
+  }
 
-        if (res?.data) {
-          return this.mapper.fromApi<EmployeeProfile>(res.data);
-        }
-        if (res?.user) {
-          return this.mapper.fromApi<EmployeeProfile>(res.user);
-        }
-        return this.mapper.fromApi<EmployeeProfile>(res);
-      })
-    );
-  }
-  getMyLeaveBalances(): Observable<Record<string, LeaveBalance>> {
-    return this.http.get<any>(`${this.apiUrl}/leave-balances/me`).pipe(
-      map((res) => {
-        console.log('📥 Leave Balances Response:', res);
-        return res?.data || res || {};
-      })
-    );
-  }
-  updateProfile(
-    profileData: Partial<EmployeeProfile>
-  ): Observable<EmployeeProfile> {
+  getProfile(): Observable<any> {
     return this.http
-      .put<ApiResponse<EmployeeProfile>>(
-        `${this.apiUrl}/profile`,
-        this.mapper.toApi(profileData)
-      )
-      .pipe(map((res) => this.mapper.fromApi<EmployeeProfile>(res.data)));
+      .get<ApiResponse<any>>(`${this.apiUrl}/profile/me`)
+      .pipe(map((res) => this.mapper.fromApi<any>(res.data)));
   }
 
   uploadProfilePicture(userId: string, file: File) {
@@ -71,13 +93,11 @@ export class ApiService {
       .pipe(map((res) => this.mapper.fromApi<DashboardData>(res.data)));
   }
 
-
   getLeaveTypes(): Observable<LeaveType[]> {
     return this.http
       .get<ApiResponse<LeaveType[]>>(`${this.apiUrl}/leave-types`)
       .pipe(map((res) => this.mapper.fromApiArray<LeaveType>(res.data || [])));
   }
-
 
   submitLeaveRequest(leaveRequest: LeaveRequest): Observable<ApiResponse<any>> {
     const formData = new FormData();
@@ -95,7 +115,6 @@ export class ApiService {
       formData.append('attachment', leaveRequest.attachment);
     }
 
-
     return this.http.post<ApiResponse<any>>(
       `${this.apiUrl}/leave-requests`,
       formData
@@ -105,7 +124,6 @@ export class ApiService {
   createLeaveRequest(payload: any) {
     return this.http.post(`${this.apiUrl}/leave-requests`, payload);
   }
-
 
   getLeaveRequests(): Observable<LeaveRequest[]> {
     return this.http
@@ -119,7 +137,6 @@ export class ApiService {
       .pipe(map((res) => (res && res.data ? res.data : res)));
   }
 
-
   getAllPendingRequests(): Observable<number> {
     return this.http
       .get<any>(`${this.apiUrl}/leave-requests/all`)
@@ -130,7 +147,6 @@ export class ApiService {
         })
       );
   }
-
 
   getAllRejectedRequests(): Observable<number> {
     return this.http
@@ -182,7 +198,6 @@ export class ApiService {
       .pipe(map((res) => this.mapper.fromApiArray<Holiday>(res.data || [])));
   }
 
-
   getAllUsers(): Observable<User[]> {
     return this.http
       .get<ApiResponse<User[]>>(`${this.apiUrl}/users`)
@@ -198,12 +213,26 @@ export class ApiService {
       .get<ApiResponse<Record<string, LeaveBalance>>>(`${this.apiUrl}/leave-balances/user/${userId}`)
       .pipe(map((res) => this.mapper.fromApi<Record<string, LeaveBalance>>(res.data)));
   }
+
   registerWithFile(formData: FormData): Promise<any> {
     const url = `${this.apiUrl}/auth/register`;
     return this.http.post<ApiResponse<any>>(url, formData).toPromise();
   }
 
+  getAdminDashboardData(): Observable<ApiResponse<AdminDashboardData>> {
+    return this.http.get<ApiResponse<AdminDashboardData>>(
+      `${this.apiUrl}/admin/dashboard`
+    );
+  }
+
+  getLeaveRequestsWithBalance(): Observable<ApiResponse<LeaveRequestsWithBalanceData>> {
+    return this.http.get<ApiResponse<LeaveRequestsWithBalanceData>>(
+      `${this.apiUrl}/leave-requests/with-balance`
+    );
+  }
 }
 
 export type { LeaveRequest };
 export type { LeaveType };
+export type { AdminDashboardData };
+export type { LeaveRequestsWithBalanceData };

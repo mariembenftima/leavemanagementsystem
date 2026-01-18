@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal } from '@angular/core';  // ✅ ADDED OnDestroy
+import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';  
 import { ApiService } from '../../../services/api.service';
@@ -6,13 +6,22 @@ import { Activity } from '../../../../types/activity.model';
 import { DataMapperService } from '../../../../helpers/data-mapper.service';
 import { Holiday } from '../../../../types/holiday.model';
 
-
 interface DashboardStats {
   pendingRequests: number;
   approvedRequests: number;
   rejectedRequests: number;
   totalLeaveTypes: number;
   activeHolidays: number;
+}
+
+interface AdminDashboardData {
+  userCount: number;
+  pendingRequests: number;
+  approvedRequests: number;
+  rejectedRequests: number;
+  totalLeaveTypes: number;
+  holidays: Holiday[];
+  activities: Activity[];
 }
 
 @Component({
@@ -57,76 +66,45 @@ export class AdminDashboard implements OnInit, OnDestroy {
   }
 
   private loadDashboardData(): void {
-    this.api.getAllUsersCount()
-      .pipe(takeUntil(this.destroy$))  
-      .subscribe({
-        next: (count) => this.userCount.set(count),
-        error: (err) => console.error('Failed to load user count', err),
-      });
-
-    this.api.getAllPendingRequests()
-      .pipe(takeUntil(this.destroy$)) 
-      .subscribe({
-        next: (res) => {
-          this.pendingCount.set(res);
-          this.stats.pendingRequests = res;
-        },
-      });
-
-    this.api.getAllRejectedRequests()
+    this.api.getAdminDashboardData()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (res) => {
-          this.rejectedCount.set(res);
-          this.stats.rejectedRequests = res;
-        },
-      });
+        next: (response) => {
 
-    this.api.getAllApprovedRequests()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (res) => {
-          this.approvedCount.set(res);
-          this.stats.approvedRequests = res;
-        },
-      });
+          if (!response || !response.data) {
+            console.error('Invalid response structure:', response);
+            return;
+          }
 
-    this.api.getLeaveTypes()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (res) => {
-          this.leaveTypeCount.set(res.length);
-          this.stats.totalLeaveTypes = res.length;
-        },
-        error: (err) => console.error('Failed to load leave types', err),
-      });
+          const data = response.data;
 
-    this.api.getHolidays()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (res) => {
-          const activeHolidays = res.filter(
+          this.userCount.set(data.userCount || 0);
+          this.pendingCount.set(data.pendingRequests || 0);
+          this.approvedCount.set(data.approvedRequests || 0);
+          this.rejectedCount.set(data.rejectedRequests || 0);
+          this.leaveTypeCount.set(data.totalLeaveTypes || 0);
+
+          const activeHolidays = (data.holidays || []).filter(
             (h: Holiday) => new Date(h.date) > new Date()
           );
           this.holidayCount.set(activeHolidays.length);
-          this.stats.activeHolidays = activeHolidays.length;
+  
+          this.stats = {
+            pendingRequests: data.pendingRequests || 0,
+            approvedRequests: data.approvedRequests || 0,
+            rejectedRequests: data.rejectedRequests || 0,
+            totalLeaveTypes: data.totalLeaveTypes || 0,
+            activeHolidays: activeHolidays.length,
+          };
+        
+          if (data.activities && data.activities.length > 0) {
+            const mapped = this.mapper.fromApiArray<Activity>(data.activities);
+            this.recentActivities = mapped.slice(0, 6);
+          }
         },
-        error: (err) => console.error('Failed to load holidays', err),
-      });
-
-    this.loadRecentActivities();
-  }
-
-  private loadRecentActivities(): void {
-    this.api
-      .getDashboardData()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (res) => {
-          const mapped = this.mapper.fromApiArray<Activity>(res.activities || []);
-          this.recentActivities = mapped.slice(0, 6); 
+        error: (err) => {
+          console.error('Failed to load dashboard data', err);
         },
-        error: (err) => console.error('Failed to load activities', err),
       });
   }
 

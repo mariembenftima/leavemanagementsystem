@@ -1,4 +1,5 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';  
+import { Subject, takeUntil } from 'rxjs';  // ✅ ADDED for memory leak fix
 import { User } from '../../../../../../../types/user.model';
 import { UsersService } from '../../../services/users.service';
 
@@ -9,7 +10,7 @@ import { UsersService } from '../../../services/users.service';
   templateUrl: './role-modal.component.html',
   styleUrls: ['./role-modal.component.css']
 })
-export class RoleModalComponent {
+export class RoleModalComponent implements OnInit, OnDestroy {  
   @Input() user!: User;
   @Output() close = new EventEmitter<void>();
   @Output() success = new EventEmitter<void>();
@@ -24,10 +25,17 @@ export class RoleModalComponent {
     { value: 'EMPLOYEE', label: 'Employee' }
   ];
 
+  private destroy$ = new Subject<void>(); 
+
   constructor(private usersService: UsersService) {}
 
   ngOnInit(): void {
     this.selectedRoles = [...this.user.roles];
+  }
+
+  ngOnDestroy(): void {  
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   toggleRole(role: string): void {
@@ -55,16 +63,18 @@ export class RoleModalComponent {
 
     this.loading = true;
 
-    this.usersService.updateUserRoles(this.user.id, this.selectedRoles).subscribe({
-      next: () => {
-        alert('Roles updated successfully');
-        this.success.emit();
-      },
-      error: (error) => {
-        console.error('Error updating roles:', error);
-        alert('Failed to update roles');
-        this.loading = false;
-      }
-    });
+    this.usersService.updateUserRoles(this.user.id, this.selectedRoles)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          alert('Roles updated successfully');
+          this.success.emit();
+        },
+        error: (error) => {
+          console.error('Error updating roles:', error);
+          alert('Failed to update roles');
+          this.loading = false;
+        }
+      });
   }
 }
