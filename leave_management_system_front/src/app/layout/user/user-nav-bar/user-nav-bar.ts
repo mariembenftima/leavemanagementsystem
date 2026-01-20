@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../private/services/auth.service';
-import { Subscription } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';  
 
 interface NavItem {
   label: string;
@@ -50,13 +50,12 @@ export class UserNavBar implements OnInit, OnDestroy {
     return parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase();
   }
 
-  private userSubscription?: Subscription;
+  private destroy$ = new Subject<void>();  
 
-  // Dropdown states
+
   showNotificationDropdown = false;
   showUserDropdown = false;
-  
-  // HR and Manager contact information
+
   hrContacts = [
     {
       name: 'Sarah Johnson',
@@ -84,14 +83,16 @@ export class UserNavBar implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Subscribe to current user changes
-    this.userSubscription = this.authService.currentUser$.subscribe(user => {
-      if (user) {
-        this.updateUserInfo(user);
-      }
-    });
 
-    // Load current user if available
+    this.authService.currentUser$
+      .pipe(takeUntil(this.destroy$))  
+      .subscribe(user => {
+        if (user) {
+          this.updateUserInfo(user);
+        }
+      });
+
+
     const currentUser = this.authService.getCurrentUser();
     if (currentUser) {
       this.updateUserInfo(currentUser);
@@ -99,33 +100,32 @@ export class UserNavBar implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.userSubscription) {
-      this.userSubscription.unsubscribe();
-    }
+
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
-  // Method to navigate to a specific route
+
   navigateTo(route: string): void {
-    // Update active state
+
     this.navItems.forEach((item) => (item.active = item.route === route));
     this.router.navigate([route]);
   }
 
-  // Method to check if a route is active
   isActive(route: string): boolean {
     return this.router.url === route;
   }
 
-  // User menu methods
+
   toggleUserMenu(event: Event): void {
     event.stopPropagation();
     this.showUserDropdown = !this.showUserDropdown;
-    // Close other dropdowns
+
     this.showNotificationDropdown = false;
   }
 
   private showUserOptions(): void {
-    // Example of user menu options
+
     const options = [
       'View Profile',
       'Account Settings',
@@ -133,11 +133,10 @@ export class UserNavBar implements OnInit, OnDestroy {
       'Logout',
     ];
 
-    // You can implement a proper dropdown component here
+
     console.log('User menu options:', options);
   }
 
-  // Action button methods
   showNotifications(): void {
     console.log('Notifications clicked');
     this.showNotificationDropdown = !this.showNotificationDropdown;
@@ -150,34 +149,31 @@ export class UserNavBar implements OnInit, OnDestroy {
 
   sendEmailToContact(email: string, name: string): void {
     console.log(`Opening email to: ${name} (${email})`);
-    // Open the user's default email client
+
     window.open(`mailto:${email}?subject=Leave Request Inquiry&body=Dear ${name},%0D%0A%0D%0AI would like to discuss my leave request.%0D%0A%0D%0AThank you,%0D%0A${this.currentUser.name}`, '_blank');
   }
 
   showSettings(): void {
     console.log('Settings clicked');
-    // Show settings dropdown instead of navigating
-    // You can implement settings panel/dropdown here
-    // For now, let's just navigate to profile instead of non-existent settings
+
     this.router.navigate(['/profile']);
   }
 
-  // Method to logout user
   logout(): void {
-    // Implement logout logic here
+
     console.log('Logging out...');
-    // Clear any stored authentication tokens
+
     localStorage.removeItem('authToken');
     sessionStorage.clear();
 
-    // Close any dropdowns
+
     this.closeDropdowns();
 
-    // Redirect to login page
+
     this.router.navigate(['/login']);
   }
 
-  // Method to update user info
+
   updateUserInfo(userInfo: any): void {
     if (userInfo) {
       this.currentUser = {
@@ -204,9 +200,7 @@ export class UserNavBar implements OnInit, OnDestroy {
     return 'U';
   }
 
-  // ...existing code...
 
-  // Method to handle keyboard navigation
   onKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       // Close any open dropdowns

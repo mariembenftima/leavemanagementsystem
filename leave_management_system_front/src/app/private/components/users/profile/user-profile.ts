@@ -19,10 +19,8 @@ import { EmployeeProfile } from '../../../../types/employee-profile.model';
 @Component({
   selector: 'app-employee-profile',
   templateUrl: './user-profile.html',
-
   styleUrls: ['./user-profile.css'],
   standalone: false,
-
 })
 export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
   [x: string]: any;
@@ -34,7 +32,8 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
 
   private autoSaveTimer?: number;
   private clockInterval?: number;
-  private destroy$ = new Subject<void>(); 
+  private destroy$ = new Subject<void>();
+
   constructor(
     private http: HttpClient,
     private mapper: DataMapperService,
@@ -69,9 +68,38 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     w.toggleDarkMode = this.toggleDarkMode.bind(this);
   }
 
+  ngAfterViewInit(): void {
+    document.querySelectorAll('.modal').forEach((modal) => {
+      modal.addEventListener('click', (e: Event) => {
+        if (e.target === modal) this.closeModal();
+      });
+    });
+
+    this.initializeCharts();
+    this.updateClock();
+    this.clockInterval = window.setInterval(() => this.updateClock(), 1000);
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    
+    if (this.clockInterval) clearInterval(this.clockInterval);
+    if (this.autoSaveTimer) clearTimeout(this.autoSaveTimer);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') this.closeModal();
+    if (e.ctrlKey && e.key.toLowerCase() === 'd') {
+      e.preventDefault();
+      this.downloadProfile();
+    }
+  }
+
   private loadEmployeeProfile(): void {
     this.apiService.getProfile()
-      .pipe(takeUntil(this.destroy$)) 
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (profileData) => {
           console.log('✅ Profile:', profileData);
@@ -86,6 +114,31 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
           this.isLoading = false;
         },
       });
+  }
+
+  private loadLeaveBalances(): void {
+    const userId = this.getCurrentUserId();
+    if (!userId) {
+      console.warn('⚠️ No user ID available for loading leave balances');
+      return;
+    }
+
+    this.apiService.getUserLeaveBalances(userId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (balances) => {
+          console.log('✅ Balances:', balances);
+          this.leaveBalances = balances;
+        },
+        error: (err) => {
+          console.error('❌ Balances error:', err);
+          this.leaveBalances = {};
+        },
+      });
+  }
+
+  private getCurrentUserId(): string {
+    return this.authService.getCurrentUserId() || '';
   }
 
   getAge(): number | null {
@@ -105,33 +158,6 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     return Math.max(0, age);
   }
 
-  private loadLeaveBalances(): void {
-    this.apiService.getMyLeaveBalances()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (balances) => {
-          console.log('✅ Balances:', balances);
-          this.leaveBalances = balances;
-        },
-        error: (err) => {
-          console.error('❌ Balances error:', err);
-          this.leaveBalances = {};
-        },
-      });
-  }
-
-  ngAfterViewInit(): void {
-    document.querySelectorAll('.modal').forEach((modal) => {
-      modal.addEventListener('click', (e: Event) => {
-        if (e.target === modal) this.closeModal();
-      });
-    });
-
-    this.initializeCharts();
-    this.updateClock();
-    this.clockInterval = window.setInterval(() => this.updateClock(), 1000);
-  }
-
   getYearsOfExperience(): number {
     if (!this.employeeData?.hireDate && !this.employeeData?.hireDate) {
       return 0;
@@ -149,28 +175,6 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     }
 
     return Math.max(0, years);
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-    
-    // Existing cleanup
-    if (this.clockInterval) clearInterval(this.clockInterval);
-    if (this.autoSaveTimer) clearTimeout(this.autoSaveTimer);
-  }
-
-  @HostListener('document:keydown', ['$event'])
-  handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') this.closeModal();
-    if (e.ctrlKey && e.key.toLowerCase() === 'd') {
-      e.preventDefault();
-      this.downloadProfile();
-    }
-  }
-
-  private getCurrentUserId(): string {
-    return this.authService.getCurrentUserId() || '';
   }
 
   closeModal(): void {
@@ -338,13 +342,13 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
         if (this.autoSaveTimer) clearTimeout(this.autoSaveTimer);
         this.autoSaveTimer = window.setTimeout(() => {
           this.showNotification('Auto-saved changes.');
-          
         }, 2000);
       });
     });
   }
 
   updateClock(): void { }
+  
   initializeCharts(): void { }
 
   private capFirst(s: string): string {
