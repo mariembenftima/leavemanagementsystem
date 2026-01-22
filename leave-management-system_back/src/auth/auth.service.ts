@@ -4,6 +4,7 @@ import {
   BadRequestException,
   NotFoundException,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
@@ -14,8 +15,11 @@ import { AuthResponse } from './types/interfaces/auth-response.interface';
 import { RegisterUserDto } from './types/register-user.dto';
 import { ChangePasswordDto } from './types/dtos/change-password.dto';
 import { User } from '../users/entities/users.entity';
+
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -27,32 +31,24 @@ export class AuthService {
     identifier: string,
     pass: string,
   ): Promise<AuthResponse> {
-    console.log(
-      '🔍 validateUserIdentifier called with identifier:',
-      identifier,
-    );
+    this.logger.debug(`Validating user identifier: ${identifier}`);
 
     let user = await this.usersService.findByEmail(identifier);
-    console.log('🔎 findByEmail result:', !!user);
 
     if (!user) {
       user = await this.usersService.findByUsername(identifier);
-      console.log('🔎 findByUsername result:', !!user);
     }
 
     if (user) {
       const match = await bcrypt.compare(pass, user.password);
-      console.log('🔐 password compare result for', identifier, ':', match);
 
       if (match) {
+        this.logger.debug(`Authentication successful for: ${identifier}`);
         return this.login(user);
       }
     }
 
-    console.log(
-      '❌ validateUserIdentifier - authentication failed for',
-      identifier,
-    );
+    this.logger.warn(`Authentication failed for: ${identifier}`);
     throw new Error('Invalid username/email or password');
   }
 
@@ -63,7 +59,6 @@ export class AuthService {
     return this.validateUserIdentifier(identifier, password);
   }
 
-  // ✅ Méthode login avec typage correct (synchrone)
   login(user: User): AuthResponse {
     const payload = {
       sub: user.id,
@@ -134,6 +129,8 @@ export class AuthService {
       };
       const access_token = this.jwtService.sign(payload);
 
+      this.logger.log(`User registered successfully: ${email}`);
+
       return {
         success: true,
         access_token,
@@ -150,6 +147,7 @@ export class AuthService {
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to create user: ${errorMessage}`);
       throw new BadRequestException('Failed to create user: ' + errorMessage);
     }
   }
@@ -169,27 +167,25 @@ export class AuthService {
         });
       }
 
-      console.log(`✅ Created initial leave balances for user ${userId}`);
+      this.logger.log(`Created initial leave balances for user: ${userId}`);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
-      console.error(
-        `❌ Failed to create leave balances for user ${userId}:`,
-        errorMessage,
+      this.logger.error(
+        `Failed to create leave balances for user ${userId}: ${errorMessage}`,
       );
     }
   }
 
   async findUserById(userId: string): Promise<User> {
     try {
-      console.log('🔍 Finding user by ID:', userId);
+      this.logger.debug(`Finding user by ID: ${userId}`);
       const user = await this.usersService.getUserById(userId);
-      console.log('✅ User found:', user.email);
       return user;
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
-      console.log('❌ Error finding user by ID:', errorMessage);
+      this.logger.error(`Error finding user by ID: ${errorMessage}`);
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
   }
@@ -200,29 +196,24 @@ export class AuthService {
   ): Promise<{ success: boolean; message: string }> {
     const { currentPassword, newPassword, confirmPassword } = changePasswordDto;
 
-    // Validate that new passwords match
     if (newPassword !== confirmPassword) {
       throw new BadRequestException('New passwords do not match');
     }
 
-    // Validate that new password is different from current
     if (currentPassword === newPassword) {
       throw new BadRequestException(
         'New password must be different from current password',
       );
     }
 
-    // Validate password length
     if (newPassword.length < 6) {
       throw new BadRequestException(
         'Password must be at least 6 characters long',
       );
     }
 
-    // Find the user
     const user = await this.findUserById(userId);
 
-    // Verify current password
     const isPasswordValid = await bcrypt.compare(
       currentPassword,
       user.password,
@@ -231,13 +222,11 @@ export class AuthService {
       throw new UnauthorizedException('Current password is incorrect');
     }
 
-    // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update the password using the users service
     await this.usersService.updateUser(userId, { password: hashedPassword });
 
-    console.log('✅ Password changed successfully for user:', userId);
+    this.logger.log(`Password changed successfully for user: ${userId}`);
 
     return {
       success: true,

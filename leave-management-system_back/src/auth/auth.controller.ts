@@ -8,10 +8,9 @@ import {
   Get,
   UseGuards,
   Request,
-  Query,
-  ForbiddenException,
   Patch,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -21,6 +20,10 @@ import {
   ApiConsumes,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+// ⚠️ NOTE: Uncomment this line AFTER installing @nestjs/throttler
+// Run: npm install @nestjs/throttler
+// import { Throttle } from '@nestjs/throttler';
+
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from './types/register-user.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -34,27 +37,9 @@ import { ChangePasswordDto } from './types/dtos/change-password.dto';
 @ApiTags('authentication')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private readonly authService: AuthService) {}
-
-  @Get('dev-token')
-  async devToken(@Query('userId') userId: string) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new ForbiddenException('Not available in production');
-    }
-    if (!userId) {
-      return { success: false, message: 'userId query parameter is required' };
-    }
-
-    try {
-      const user = await this.authService.findUserById(userId);
-      const result = this.authService.login(user);
-      // Mirror login response structure
-      return result;
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return { success: false, message };
-    }
-  }
 
   @Post('login')
   @ApiOperation({ summary: 'User login' })
@@ -62,10 +47,10 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   async login(@Body() loginDto: LoginDto) {
     const identifier = loginDto.email;
-    console.log('🔍 Login attempt received for email:', identifier);
+    this.logger.log(`Login attempt for identifier: ${identifier}`);
 
     if (!identifier || !loginDto.password) {
-      console.log('❌ Login failed - missing email or password');
+      this.logger.warn('Login failed - missing credentials');
       throw new UnauthorizedException('Missing credentials');
     }
 
@@ -74,15 +59,14 @@ export class AuthController {
         identifier,
         loginDto.password,
       );
-      console.log('✅ Login successful for:', identifier);
-      console.log('result:', result);
+      this.logger.log(`Login successful for: ${identifier}`);
       return {
         ...result,
       };
-    } catch (error: unknown) {
+    } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
-      console.log('❌ Login failed for:', identifier, errorMessage);
+      this.logger.warn(`Login failed for: ${identifier} - ${errorMessage}`);
       throw new UnauthorizedException('Invalid email or password');
     }
   }
@@ -119,11 +103,7 @@ export class AuthController {
     @Body() registerDto: RegisterUserDto,
     @UploadedFile() profilePicture?: Express.Multer.File,
   ) {
-    console.log('🔍 Registration attempt received:', registerDto.email);
-    console.log(
-      '📁 Profile picture:',
-      profilePicture ? profilePicture.filename : 'No file uploaded',
-    );
+    this.logger.log(`Registration attempt for: ${registerDto.email}`);
 
     try {
       const registrationData = {
@@ -134,20 +114,18 @@ export class AuthController {
       };
 
       const result = await this.authService.registerUser(registrationData);
-      console.log('✅ Registration successful for:', registerDto.email);
+      this.logger.log(`Registration successful for: ${registerDto.email}`);
       return {
         success: true,
         user: result.user,
         data: result,
         message: 'Registration successful',
       };
-    } catch (error: unknown) {
+    } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Registration failed';
-      console.log(
-        '❌ Registration failed for:',
-        registerDto.email,
-        errorMessage,
+      this.logger.error(
+        `Registration failed for: ${registerDto.email} - ${errorMessage}`,
       );
       throw error;
     }
@@ -167,10 +145,10 @@ export class AuthController {
       const userId = req.user.userId;
       const user = await this.authService.findUserById(userId);
       return { success: true, user };
-    } catch (error: unknown) {
+    } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to retrieve user';
-      console.log('❌ Failed to get current user:', errorMessage);
+      this.logger.error(`Failed to get current user: ${errorMessage}`);
       throw new UnauthorizedException('Unable to retrieve user profile');
     }
   }
@@ -188,19 +166,19 @@ export class AuthController {
   ) {
     try {
       const userId = req.user.userId || req.user.id;
-      console.log('🔐 Password change attempt for user:', userId);
+      this.logger.log(`Password change attempt for user: ${userId}`);
 
       const result = await this.authService.changePassword(
         userId,
         changePasswordDto,
       );
 
-      console.log('✅ Password changed successfully for:', userId);
+      this.logger.log(`Password changed successfully for: ${userId}`);
       return result;
-    } catch (error: unknown) {
+    } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Password change failed';
-      console.log('❌ Password change failed:', errorMessage);
+      this.logger.error(`Password change failed: ${errorMessage}`);
 
       if (error instanceof BadRequestException) {
         throw error;
