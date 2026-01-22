@@ -298,7 +298,7 @@ export class ProfileService {
     });
   }
 
-  // ✅ FIXED: Implemented actual leave calculation
+  // ✅ FIXED: Implemented actual leave calculation with proper TypeScript typing
   private async getUsedLeaves(
     userId: string,
     leaveType: string,
@@ -310,7 +310,6 @@ export class ProfileService {
     );
 
     try {
-      // Query to sum approved leave days for the current year
       const result = await this.leaveRequestRepository
         .createQueryBuilder('lr')
         .select('COALESCE(SUM(lr.days), 0)', 'totalDays')
@@ -320,9 +319,9 @@ export class ProfileService {
         .andWhere('EXTRACT(YEAR FROM lr.startDate) = :year', {
           year: currentYear,
         })
-        .getRawOne();
+        .getRawOne<{ totalDays: string }>(); // ✅ Proper TypeScript typing
 
-      const usedDays = parseFloat(result?.totalDays || '0');
+      const usedDays = parseFloat(result?.totalDays ?? '0');
       this.logger.debug(
         `User ${userId} has used ${usedDays} ${leaveType} days in ${currentYear}`,
       );
