@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,6 +10,7 @@ import { EmployeeProfile } from './entities/employee-profile.entity';
 import { Performance } from './entities/performance.entity';
 import { Activity } from './entities/activity.entity';
 import { User } from '../users/entities/users.entity';
+import { LeaveRequest } from '../leave-requests/entities/leave-request.entity';
 import { CreateProfileDto } from './types/dtos/create-profile.dto';
 import { UpdateProfileDto } from './types/dtos/update-profile.dto';
 import { PerformanceUpdateDto } from './types/dtos/performance-update.dto';
@@ -17,6 +19,8 @@ import { ActivityType } from './types/enums/activity-type.enum';
 
 @Injectable()
 export class ProfileService {
+  private readonly logger = new Logger(ProfileService.name);
+
   constructor(
     @InjectRepository(EmployeeProfile)
     private profileRepository: Repository<EmployeeProfile>,
@@ -29,6 +33,9 @@ export class ProfileService {
 
     @InjectRepository(User)
     private userRepository: Repository<User>,
+
+    @InjectRepository(LeaveRequest)
+    private leaveRequestRepository: Repository<LeaveRequest>,
   ) {}
 
   async createProfile(
@@ -86,6 +93,7 @@ export class ProfileService {
 
     return profile;
   }
+
   async getFullProfile(userId: string, requestingUser: User) {
     this.validateAccess(userId, requestingUser);
 
@@ -246,6 +254,7 @@ export class ProfileService {
       order: { createdAt: 'DESC' },
     });
   }
+
   async findByDepartment(department: string): Promise<EmployeeProfile[]> {
     return this.profileRepository.find({
       where: { department },
@@ -289,15 +298,42 @@ export class ProfileService {
     });
   }
 
-  private getUsedLeaves(userId: string, leaveType: string): Promise<number> {
+  // ✅ FIXED: Implemented actual leave calculation
+  private async getUsedLeaves(
+    userId: string,
+    leaveType: string,
+  ): Promise<number> {
     const currentYear = new Date().getFullYear();
 
-    console.log(
+    this.logger.debug(
       `Calculating used ${leaveType} leave for user ${userId} in year ${currentYear}`,
     );
 
-    // TODO: Implement actual leave calculation
-    return Promise.resolve(0);
+    try {
+      // Query to sum approved leave days for the current year
+      const result = await this.leaveRequestRepository
+        .createQueryBuilder('lr')
+        .select('COALESCE(SUM(lr.days), 0)', 'totalDays')
+        .where('lr.userId = :userId', { userId })
+        .andWhere('LOWER(lr.leaveType) = LOWER(:leaveType)', { leaveType })
+        .andWhere('lr.status = :status', { status: 'APPROVED' })
+        .andWhere('EXTRACT(YEAR FROM lr.startDate) = :year', {
+          year: currentYear,
+        })
+        .getRawOne();
+
+      const usedDays = parseFloat(result?.totalDays || '0');
+      this.logger.debug(
+        `User ${userId} has used ${usedDays} ${leaveType} days in ${currentYear}`,
+      );
+
+      return usedDays;
+    } catch (error) {
+      this.logger.error(
+        `Error calculating leave for user ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      return 0; // Return 0 on error to prevent dashboard from breaking
+    }
   }
 
   async getLeaveBalanceOverview(userId: string) {
@@ -307,21 +343,28 @@ export class ProfileService {
 
     if (!profile) return null;
 
+    // Fetch all leave types in parallel for better performance
+    const [annualUsed, sickUsed, personalUsed] = await Promise.all([
+      this.getUsedLeaves(userId, 'annual'),
+      this.getUsedLeaves(userId, 'sick'),
+      this.getUsedLeaves(userId, 'personal'),
+    ]);
+
     return {
       annual: {
         total: 25,
-        used: await this.getUsedLeaves(userId, 'annual'),
-        remaining: 25 - (await this.getUsedLeaves(userId, 'annual')),
+        used: annualUsed,
+        remaining: 25 - annualUsed,
       },
       sick: {
         total: 12,
-        used: await this.getUsedLeaves(userId, 'sick'),
-        remaining: 12 - (await this.getUsedLeaves(userId, 'sick')),
+        used: sickUsed,
+        remaining: 12 - sickUsed,
       },
       personal: {
         total: 5,
-        used: await this.getUsedLeaves(userId, 'personal'),
-        remaining: 5 - (await this.getUsedLeaves(userId, 'personal')),
+        used: personalUsed,
+        remaining: 5 - personalUsed,
       },
     };
   }
