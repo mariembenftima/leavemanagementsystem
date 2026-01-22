@@ -298,7 +298,6 @@ export class ProfileService {
     });
   }
 
-  // ✅ FIXED: Implemented actual leave calculation with proper TypeScript typing
   private async getUsedLeaves(
     userId: string,
     leaveType: string,
@@ -319,7 +318,7 @@ export class ProfileService {
         .andWhere('EXTRACT(YEAR FROM lr.startDate) = :year', {
           year: currentYear,
         })
-        .getRawOne<{ totalDays: string }>(); // ✅ Proper TypeScript typing
+        .getRawOne<{ totalDays: string }>();
 
       const usedDays = parseFloat(result?.totalDays ?? '0');
       this.logger.debug(
@@ -331,7 +330,7 @@ export class ProfileService {
       this.logger.error(
         `Error calculating leave for user ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
-      return 0; // Return 0 on error to prevent dashboard from breaking
+      return 0;
     }
   }
 
@@ -341,8 +340,6 @@ export class ProfileService {
     });
 
     if (!profile) return null;
-
-    // Fetch all leave types in parallel for better performance
     const [annualUsed, sickUsed, personalUsed] = await Promise.all([
       this.getUsedLeaves(userId, 'annual'),
       this.getUsedLeaves(userId, 'sick'),
