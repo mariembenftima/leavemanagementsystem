@@ -4,7 +4,6 @@ import { LeaveTypeEntity } from './entities/leave-type.entity';
 import { LeaveTypesService } from './leave-types.service';
 import { LeaveTypesController } from './leave-types.controller';
 import { LEAVE_TYPES_PORT } from './types/tokens';
-import { LeaveTypesPort } from './types/ports/leave-types.port';
 
 @Module({
   imports: [TypeOrmModule.forFeature([LeaveTypeEntity])],
