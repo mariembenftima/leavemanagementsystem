@@ -5,7 +5,7 @@ import { DataMapperService } from '../../helpers/data-mapper.service';
 import { EmployeeProfile } from '../../types/employee-profile.model';
 import { LeaveBalance } from '../../types/leave-balance.model';
 import { ApiResponse } from '../../types/api-response.type';
-import { environment } from '../../../environments/environment.development';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root',

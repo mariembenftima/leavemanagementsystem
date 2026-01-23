@@ -4,20 +4,13 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { EmployeeProfile } from '../../types/employee-profile.model';
-import { environment } from '../../../environments/environment.development';
+import { environment } from '../../../environments/environment';
 
 
 export interface LoginRequest {
   email: string;
   password: string;
 }
-
-// export interface LoginResponse {
-//   success: boolean;
-//   access_token: string;
-//   user: EmployeeProfile;
-//   message: string;
-// }
 
 export interface LoginResponseData {
   access_token: string;
@@ -54,19 +47,19 @@ export class AuthService {
         }
         this.currentUserSubject.next(parsed as EmployeeProfile);
       } catch (err) {
-        console.warn('Failed to parse currentUser from storage', err);
+    
         this.currentUserSubject.next(null);
       }
     }
   }
+
   login(credentials: LoginRequest): Observable<LoginResponse> {
     return this.http
       .post<LoginResponse>(`${this.apiUrl}/auth/login`, credentials)
       .pipe(
         tap((response) => {
-          console.log('response data from service before conditopn:', response);
+        
           if (response.data.success && response.data.access_token) {
-            console.log('response data from service:', response);
             const user: any = response.data.user || {};
             if (user.roles && typeof user.roles === 'string') {
               user.roles = user.roles.split(',').map((r: string) => r.trim());
@@ -76,7 +69,7 @@ export class AuthService {
               localStorage.setItem('authToken', response.data.access_token);
               localStorage.setItem('currentUser', JSON.stringify(user));
             } catch (err) {
-              console.warn('Failed to write auth data to storage', err);
+              
             }
 
             this.currentUserSubject.next(user as EmployeeProfile);
@@ -84,12 +77,14 @@ export class AuthService {
         })
       );
   }
+
   logout(): void {
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentUser');
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
   }
+
   getCurrentUser(): EmployeeProfile | null {
     return this.currentUserSubject.value;
   }
@@ -105,6 +100,7 @@ export class AuthService {
   isLoggedIn(): boolean {
     return !!this.getToken();
   }
+
   hasRole(role: string): boolean {
     const user = this.getCurrentUser();
     if (!user || !user.roles) return false;
@@ -116,6 +112,7 @@ export class AuthService {
     localStorage.setItem('currentUser', JSON.stringify(user));
     this.currentUserSubject.next(user);
   }
+
   private authHeaders(): HttpHeaders {
     const token = this.getToken();
     if (!token) return new HttpHeaders();
@@ -123,6 +120,7 @@ export class AuthService {
       Authorization: `Bearer ${token}`,
     });
   }
+
   getProfileFromServer(): Observable<EmployeeProfile> {
     return this.http.get<any>(`${this.apiUrl}/auth/me`, {
       headers: this.authHeaders(),

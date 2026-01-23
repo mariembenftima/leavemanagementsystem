@@ -4,7 +4,8 @@ import { map, Observable } from 'rxjs';
 import { DataMapperService } from '../../helpers/data-mapper.service';
 import { DashboardData } from '../../types/dashboard-data.type';
 import { ApiResponse } from '../../types/api-response.type';
-import { environment } from '../../../environments/environment.development';
+import { environment } from '../../../environments/environment';
+
 
 
 @Injectable({
