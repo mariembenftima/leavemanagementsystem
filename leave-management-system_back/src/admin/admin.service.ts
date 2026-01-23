@@ -8,7 +8,7 @@ import { LeaveType } from 'src/leave-types/types/interfaces/leave-type.interface
 import { User } from 'src/users/entities/users.entity';
 import { Repository } from 'typeorm';
 
-interface DashboardData {
+export interface DashboardData {
   userCount: number;
   pendingRequests: number;
   approvedRequests: number;
@@ -18,7 +18,7 @@ interface DashboardData {
   activities: any[];
 }
 
-interface Stats {
+export interface Stats {
   totalUsers: number;
   activeUsers: number;
   inactiveUsers: number;

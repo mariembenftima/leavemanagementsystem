@@ -6,6 +6,7 @@ import { User } from 'src/users/entities/users.entity';
 import { LeaveRequest } from 'src/leave-requests/entities/leave-request.entity';
 import { Holiday } from 'src/holidays/entities/holiday.entity';
 import { LeaveTypesService } from 'src/leave-types/leave-types.service';
+import { LeaveTypeEntity } from 'src/leave-types/entities/leave-type.entity';
 
 @Module({
   imports: [
@@ -13,8 +14,8 @@ import { LeaveTypesService } from 'src/leave-types/leave-types.service';
       User,
       LeaveRequest,
       LeaveTypesService,
+      LeaveTypeEntity,
       Holiday,
-      // ✅ Activity removed - add it later if you have it
     ]),
   ],
   controllers: [AdminController],

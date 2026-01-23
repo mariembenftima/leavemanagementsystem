@@ -1,5 +1,5 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import { AdminService } from './admin.service';
+import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -10,7 +10,14 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../users/roleguard';
 import { Roles } from '../users/roledecorator';
 import { UserRole } from '../users/types/enums/user-role.enum';
-
+import { AdminService } from './admin.service';
+export type AuthRequest = Request & {
+  user: {
+    userId: string;
+    email?: string;
+    role?: string;
+  };
+};
 @ApiTags('admin')
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -32,6 +39,11 @@ export class AdminController {
       data,
       message: 'Dashboard data retrieved successfully',
     };
+  }
+  @Get('dashboard')
+  getDashboard(@Req() req: AuthRequest) {
+    console.log(req.user.role);
+    return this.adminService.getDashboardData();
   }
 
   @Get('stats')
