@@ -1,11 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import * as fs from 'fs';
 import * as path from 'path';
 
+// ✅ Type for TypeORM UPDATE query result
+interface UpdateResult {
+  affectedRows?: number;
+  [key: string]: unknown;
+}
+
 @Injectable()
 export class ProfilePictureService {
+  private readonly logger = new Logger(ProfilePictureService.name);
+
   constructor(@InjectDataSource() private dataSource: DataSource) {}
 
   async uploadProfilePicture(
@@ -13,17 +21,20 @@ export class ProfilePictureService {
     file: Express.Multer.File,
   ): Promise<string> {
     try {
+      // ✅ SECURITY: Validate file before processing
+      this.validateFile(file);
+
       // Create uploads directory if it doesn't exist
       const uploadsDir = path.join(process.cwd(), 'uploads', 'profile_pics');
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
       }
 
-      // Get file extension
-      const fileExtension = path.extname(file.originalname).toLowerCase();
+      // ✅ SECURITY: Use validated file extension from mime type, not original filename
+      const fileExtension = this.getExtensionFromMimeType(file.mimetype);
 
       // Create new filename: user_<id>.<ext>
-      const fileName = `user_${userId}${fileExtension}`;
+      const fileName = `user_${userId}.${fileExtension}`;
       const filePath = path.join(uploadsDir, fileName);
 
       // Write file to disk
@@ -32,34 +43,14 @@ export class ProfilePictureService {
       // Create the URL path for accessing the file
       const profilePicUrl = `/uploads/profile_pics/${fileName}`;
 
-      // Update user's profile_pic_url in database using raw SQL
-      const query = 'UPDATE users SET profile_picture_url = $1 WHERE id = $2';
-      const result = await this.dataSource.query(query, [
-        profilePicUrl,
-        userId,
-      ]);
+      // ✅ DATABASE: Update user's profile picture URL with proper typing
+      const result = await this.dataSource.query<UpdateResult[] | UpdateResult>(
+        'UPDATE users SET profile_picture_url = $1 WHERE id = $2',
+        [profilePicUrl, userId],
+      );
 
-      console.log('🔍 Database update result:', result);
-
-      // TypeORM's raw query for UPDATE returns an array where:
-      // result[0] = result data (empty for UPDATE)
-      // result[1] = affected rows count (for PostgreSQL UPDATE queries)
-      let affectedRows = 0;
-
-      // Different ways TypeORM might return the affected rows
-      if (Array.isArray(result) && result.length > 1) {
-        affectedRows = result[1]; // Some versions return [[], affectedRows]
-      } else if (
-        result &&
-        typeof result === 'object' &&
-        'affectedRows' in result
-      ) {
-        affectedRows = result.affectedRows; // Some versions return {affectedRows: n}
-      } else if (typeof result === 'number') {
-        affectedRows = result; // Some versions return just the number
-      }
-
-      console.log('🔍 Affected rows:', affectedRows);
+      // Get affected rows count
+      const affectedRows = this.getAffectedRows(result);
 
       // Check if user was found and updated
       if (affectedRows === 0) {
@@ -67,41 +58,140 @@ export class ProfilePictureService {
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
-        throw new Error(`User with ID ${userId} not found`);
+        throw new BadRequestException(`User with ID ${userId} not found`);
       }
 
-      console.log(
-        `✅ Profile picture uploaded for user ${userId}: ${profilePicUrl}`,
+      this.logger.log(
+        `Profile picture uploaded successfully for user: ${userId}`,
       );
-
-      // Verify the update worked by querying the user
-      const verifyQuery = 'SELECT profile_picture_url FROM users WHERE id = $1';
-      const verifyResult = await this.dataSource.query(verifyQuery, [userId]);
-      console.log('🔍 Verification result:', verifyResult);
-
-      if (verifyResult && verifyResult.length > 0) {
-        console.log(
-          '✅ Database updated successfully. New profile_picture_url:',
-          verifyResult[0].profile_picture_url,
-        );
-      } else {
-        console.log('❌ User not found during verification');
-      }
 
       return profilePicUrl;
     } catch (error) {
-      console.error('❌ Error uploading profile picture:', error);
+      this.logger.error(
+        `Error uploading profile picture for user ${userId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
       throw error;
     }
   }
 
-  // Validate file type and size
+  // ✅ SECURITY: Comprehensive file validation
+  private validateFile(file: Express.Multer.File): void {
+    // 1. Check file size (5MB max)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      throw new BadRequestException('File size exceeds 5MB limit');
+    }
+
+    // 2. Validate mime type
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+    ];
+
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      throw new BadRequestException(
+        'Invalid file type. Only JPEG, PNG, WEBP, and GIF images are allowed',
+      );
+    }
+
+    // 3. Validate file has content
+    if (!file.buffer || file.buffer.length === 0) {
+      throw new BadRequestException('File is empty');
+    }
+
+    // 4. Basic magic number validation (check file signature)
+    this.validateFileSignature(file.buffer, file.mimetype);
+  }
+
+  // ✅ SECURITY: Validate file signature (magic numbers)
+  private validateFileSignature(buffer: Buffer, mimetype: string): void {
+    if (buffer.length < 4) {
+      throw new BadRequestException('File is too small to be a valid image');
+    }
+
+    const signatures: Record<string, number[][]> = {
+      'image/jpeg': [[0xff, 0xd8, 0xff]],
+      'image/jpg': [[0xff, 0xd8, 0xff]],
+      'image/png': [[0x89, 0x50, 0x4e, 0x47]],
+      'image/gif': [[0x47, 0x49, 0x46]],
+      'image/webp': [[0x52, 0x49, 0x46, 0x46]], // RIFF (WebP container)
+    };
+
+    const expectedSignatures = signatures[mimetype];
+    if (!expectedSignatures) {
+      return; // Unknown mime type, skip signature check
+    }
+
+    const fileSignature = Array.from(buffer.slice(0, 4));
+    const isValid = expectedSignatures.some((signature) =>
+      signature.every((byte, index) => fileSignature[index] === byte),
+    );
+
+    if (!isValid) {
+      throw new BadRequestException(
+        'File content does not match the declared file type. Possible file tampering detected.',
+      );
+    }
+  }
+
+  // ✅ SECURITY: Get safe file extension from mime type
+  private getExtensionFromMimeType(mimetype: string): string {
+    const mimeToExt: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/gif': 'gif',
+    };
+
+    const ext = mimeToExt[mimetype];
+    if (!ext) {
+      throw new BadRequestException('Unsupported file type');
+    }
+
+    return ext;
+  }
+
+  // ✅ Helper to extract affected rows from different TypeORM result formats
+  private getAffectedRows(
+    result: UpdateResult[] | UpdateResult | number,
+  ): number {
+    // TypeORM can return results in different formats depending on the database driver:
+    // 1. Array format: [[], affectedRows] - PostgreSQL often returns this
+    // 2. Object format: {affectedRows: n} - Some drivers return this
+    // 3. Just a number - Simplified format
+
+    if (Array.isArray(result)) {
+      // PostgreSQL format: [[], affectedRows]
+      if (result.length > 1 && typeof result[1] === 'number') {
+        return result[1];
+      }
+      return 0;
+    } else if (typeof result === 'object' && result !== null) {
+      // Object format: {affectedRows: n}
+      if ('affectedRows' in result && typeof result.affectedRows === 'number') {
+        return result.affectedRows;
+      }
+      return 0;
+    } else if (typeof result === 'number') {
+      // Direct number format
+      return result;
+    }
+
+    return 0;
+  }
+
+  // ✅ Static validation method for use in controllers (renamed from validateFileStatic)
   static validateFile(file: Express.Multer.File): boolean {
     const allowedMimeTypes = [
       'image/jpeg',
       'image/jpg',
       'image/png',
       'image/webp',
+      'image/gif',
     ];
     const maxSize = 5 * 1024 * 1024; // 5MB
 

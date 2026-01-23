@@ -39,7 +39,6 @@ export class UsersController {
     private readonly profilePictureService: ProfilePictureService,
   ) {}
 
-  // ✅ FIX: Removed duplicate @Get() - kept the one with guards and pagination
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.HR)
@@ -103,7 +102,6 @@ export class UsersController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get user by ID' })
   async getUserById(@Param('id', ParseUUIDPipe) id: string) {
-    // ✅ FIX: Remove 'new' - just use ParseUUIDPipe directly
     const user = await this.usersService.getUserById(id);
     return {
       success: true,
@@ -115,7 +113,7 @@ export class UsersController {
   @Patch(':id')
   async updateUser(
     @Body() updateUserDto: UpdateUsersDto,
-    @Param('id', ParseUUIDPipe) id: string, // ✅ FIX: Remove 'new'
+    @Param('id', ParseUUIDPipe) id: string,
   ) {
     const dto: Partial<CreateUsersDto> = {
       ...updateUserDto,
@@ -132,7 +130,6 @@ export class UsersController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Delete user (Admin only)' })
   async deleteUser(@Param('id', ParseUUIDPipe) id: string) {
-    // ✅ FIX: Remove 'new'
     await this.usersService.deleteUser(id);
     return {
       success: true,
@@ -146,20 +143,23 @@ export class UsersController {
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Upload profile picture' })
   async uploadProfilePicture(
-    @Param('id', ParseUUIDPipe) id: string, // ✅ FIX: Remove 'new'
+    @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
+    // ✅ Validate file was uploaded
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    // ✅ Basic validation using static method
+    if (!ProfilePictureService.validateFile(file)) {
+      throw new BadRequestException(
+        'Invalid file. Only JPG, JPEG, PNG, WEBP, and GIF files up to 5MB are allowed.',
+      );
+    }
+
     try {
-      if (!file) {
-        throw new BadRequestException('No file uploaded');
-      }
-
-      if (!ProfilePictureService.validateFile(file)) {
-        throw new BadRequestException(
-          'Invalid file. Only JPG, JPEG, PNG, and WEBP files up to 5MB are allowed.',
-        );
-      }
-
+      // ✅ Upload with comprehensive validation in service
       const profilePicUrl =
         await this.profilePictureService.uploadProfilePicture(id, file);
 
@@ -169,11 +169,13 @@ export class UsersController {
         message: 'Profile picture uploaded successfully',
       };
     } catch (error) {
-      throw new BadRequestException(
+      // ✅ Properly typed error handling
+      const errorMessage =
         error instanceof Error
           ? error.message
-          : 'Failed to upload profile picture',
-      );
+          : 'Failed to upload profile picture';
+
+      throw new BadRequestException(errorMessage);
     }
   }
 }
