@@ -1,12 +1,27 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../private/services/auth.service';
-import { Subject, takeUntil } from 'rxjs';  
+import { Subject, takeUntil } from 'rxjs';
+import { EmployeeProfile } from '../../../types/employee-profile.model';
 
 interface NavItem {
   label: string;
   route: string;
   active?: boolean;
+}
+
+interface UserInfo {
+  name: string;
+  email: string;
+  avatar: string;
+  role: string;
+}
+
+interface HRContact {
+  name: string;
+  title: string;
+  email: string;
+  department: string;
 }
 
 @Component({
@@ -24,39 +39,14 @@ export class UserNavBar implements OnInit, OnDestroy {
     { label: 'Approvals', route: '/approves' },
   ];
 
-  currentUser = {
+  currentUser: UserInfo = {
     name: 'Loading...',
     email: 'loading...',
     avatar: 'L',
     role: 'employee',
   };
 
-  get userName(): string {
-    return this.currentUser.name;
-  }
-
-  get userEmail(): string {
-    return this.currentUser.email;
-  }
-
-  get userAvatar(): string {
-    return this.currentUser.avatar || this.getInitials(this.currentUser.name);
-  }
-
-  getInitials(name: string): string {
-    if (!name) return 'U';
-    const parts = name.split(' ');
-    if (parts.length === 1) return parts[0][0].toUpperCase();
-    return parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase();
-  }
-
-  private destroy$ = new Subject<void>();  
-
-
-  showNotificationDropdown = false;
-  showUserDropdown = false;
-
-  hrContacts = [
+  hrContacts: HRContact[] = [
     {
       name: 'Sarah Johnson',
       title: 'HR Manager',
@@ -77,21 +67,24 @@ export class UserNavBar implements OnInit, OnDestroy {
     }
   ];
 
+  showNotificationDropdown = false;
+  showUserDropdown = false;
+
+  private destroy$ = new Subject<void>();
+
   constructor(
     private router: Router,
     private authService: AuthService
   ) {}
 
   ngOnInit(): void {
-
     this.authService.currentUser$
-      .pipe(takeUntil(this.destroy$))  
+      .pipe(takeUntil(this.destroy$))
       .subscribe(user => {
         if (user) {
           this.updateUserInfo(user);
         }
       });
-
 
     const currentUser = this.authService.getCurrentUser();
     if (currentUser) {
@@ -100,14 +93,30 @@ export class UserNavBar implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-
     this.destroy$.next();
     this.destroy$.complete();
   }
 
+  get userName(): string {
+    return this.currentUser.name;
+  }
+
+  get userEmail(): string {
+    return this.currentUser.email;
+  }
+
+  get userAvatar(): string {
+    return this.currentUser.avatar || this.getInitials(this.currentUser.name);
+  }
+
+  getInitials(name: string): string {
+    if (!name) return 'U';
+    const parts = name.split(' ');
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase();
+  }
 
   navigateTo(route: string): void {
-
     this.navItems.forEach((item) => (item.active = item.route === route));
     this.router.navigate([route]);
   }
@@ -116,29 +125,13 @@ export class UserNavBar implements OnInit, OnDestroy {
     return this.router.url === route;
   }
 
-
   toggleUserMenu(event: Event): void {
     event.stopPropagation();
     this.showUserDropdown = !this.showUserDropdown;
-
     this.showNotificationDropdown = false;
   }
 
-  private showUserOptions(): void {
-
-    const options = [
-      'View Profile',
-      'Account Settings',
-      'Change Password',
-      'Logout',
-    ];
-
-
-    console.log('User menu options:', options);
-  }
-
   showNotifications(): void {
-    console.log('Notifications clicked');
     this.showNotificationDropdown = !this.showNotificationDropdown;
   }
 
@@ -148,63 +141,51 @@ export class UserNavBar implements OnInit, OnDestroy {
   }
 
   sendEmailToContact(email: string, name: string): void {
-    console.log(`Opening email to: ${name} (${email})`);
-
-    window.open(`mailto:${email}?subject=Leave Request Inquiry&body=Dear ${name},%0D%0A%0D%0AI would like to discuss my leave request.%0D%0A%0D%0AThank you,%0D%0A${this.currentUser.name}`, '_blank');
+    const subject = 'Leave Request Inquiry';
+    const body = `Dear ${name},%0D%0A%0D%0AI would like to discuss my leave request.%0D%0A%0D%0AThank you,%0D%0A${this.currentUser.name}`;
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
   }
 
   showSettings(): void {
-    console.log('Settings clicked');
-
     this.router.navigate(['/profile']);
   }
 
   logout(): void {
-
-    console.log('Logging out...');
-
     localStorage.removeItem('authToken');
     sessionStorage.clear();
-
-
     this.closeDropdowns();
-
-
     this.router.navigate(['/login']);
   }
 
-
-  updateUserInfo(userInfo: any): void {
+  updateUserInfo(userInfo: EmployeeProfile): void {
     if (userInfo) {
       this.currentUser = {
-        name: userInfo.firstName && userInfo.lastName 
-          ? `${userInfo.firstName} ${userInfo.lastName}` 
-          : userInfo.fullname || userInfo.name || 'User',
+        name: userInfo.firstName && userInfo.lastName
+          ? `${userInfo.firstName} ${userInfo.lastName}`
+          : userInfo.fullname || 'User',
         email: userInfo.email || 'No email',
         avatar: this.generateAvatar(userInfo),
-        role: userInfo.roles?.[0] || userInfo.role || 'employee',
+        role: Array.isArray(userInfo.roles) && userInfo.roles.length > 0
+          ? userInfo.roles[0]
+          : 'employee',
       };
     }
   }
 
-  private generateAvatar(user: any): string {
+  private generateAvatar(user: EmployeeProfile): string {
     if (user.firstName) {
       return user.firstName.charAt(0).toUpperCase();
     } else if (user.fullname) {
       return user.fullname.charAt(0).toUpperCase();
-    } else if (user.name) {
-      return user.name.charAt(0).toUpperCase();
     } else if (user.email) {
       return user.email.charAt(0).toUpperCase();
     }
     return 'U';
   }
 
-
   onKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
-      // Close any open dropdowns
-      console.log('Escape pressed - closing dropdowns');
+      this.closeDropdowns();
     }
   }
 }
