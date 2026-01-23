@@ -18,6 +18,7 @@ import { TerminusModule } from '@nestjs/terminus';
 import { HttpModule } from '@nestjs/axios';
 import { AppService } from './app.service';
 import { AppController } from './app.controller';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { AppController } from './app.controller';
     NotificationsModule,
     TerminusModule,
     HttpModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

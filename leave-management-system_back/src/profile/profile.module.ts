@@ -8,6 +8,7 @@ import { Performance } from './entities/performance.entity';
 import { EmployeeProfile } from './entities/employee-profile.entity';
 import { Activity } from './entities/activity.entity';
 import { User } from '../users/entities/users.entity';
+import { LeaveRequest } from '../leave-requests/entities/leave-request.entity';
 
 import { ProfileController } from './profile.controller';
 
@@ -15,7 +16,13 @@ import { LeaveBalancesModule } from '../leave-balances/leave-balances.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([EmployeeProfile, Performance, Activity, User]),
+    TypeOrmModule.forFeature([
+      EmployeeProfile,
+      Performance,
+      Activity,
+      User,
+      LeaveRequest,
+    ]),
     LeaveBalancesModule,
   ],
   controllers: [ProfileController],
