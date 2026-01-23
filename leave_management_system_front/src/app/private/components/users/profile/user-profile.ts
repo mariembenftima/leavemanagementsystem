@@ -15,6 +15,32 @@ import { DataMapperService } from '../../../../helpers/data-mapper.service';
 import { ApiService } from '../../../services/api.service';
 import { EmployeeProfile } from '../../../../types/employee-profile.model';
 
+// ✅ Holiday interface for type safety
+interface Holiday {
+  id?: string;
+  name: string;
+  date: string;
+  type: string;
+  description?: string;
+}
+
+declare global {
+  interface Window {
+    closeModal?: () => void;
+    downloadProfile?: () => Promise<void>;
+    changeProfileImage?: () => void;
+    viewLeaveDetails?: (typeKey: string) => void;
+    requestLeave?: () => void;
+    sendMessage?: () => void;
+    scheduleCall?: () => void;
+    viewReports?: () => void;
+    filterHolidays?: (filter: string, ev?: Event) => void;
+    showNotification?: (message: string) => void;
+    searchEmployee?: () => void;
+    printProfile?: () => void;
+    toggleDarkMode?: () => void;
+  }
+}
 
 @Component({
   selector: 'app-employee-profile',
@@ -23,11 +49,12 @@ import { EmployeeProfile } from '../../../../types/employee-profile.model';
   standalone: false,
 })
 export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
-  [x: string]: any;
   employeeData!: EmployeeProfile;
   leaveBalances: Record<string, LeaveBalance> = {};
+  holidaysList: Holiday[] = [];  // ✅ Added holidaysList property
   isLoading = true;
   hasError = false;
+  
   @ViewChild('loadingOrError') loadingOrError!: ElementRef;
 
   private autoSaveTimer?: number;
@@ -44,28 +71,28 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     const token = localStorage.getItem('authToken');
     if (!token) {
-      console.warn('⚠️ No token found, redirecting to login...');
+      console.warn('No token found, redirecting to login...');
       window.location.href = '/login';
       return;
     }
 
     this.loadEmployeeProfile();
     this.loadLeaveBalances();
+    this.loadHolidays();  // ✅ Load holidays
 
-    const w = window as any;
-    w.closeModal = this.closeModal.bind(this);
-    w.downloadProfile = this.downloadProfile.bind(this);
-    w.changeProfileImage = this.changeProfileImage.bind(this);
-    w.viewLeaveDetails = this.viewLeaveDetails.bind(this);
-    w.requestLeave = this.requestLeave.bind(this);
-    w.sendMessage = this.sendMessage.bind(this);
-    w.scheduleCall = this.scheduleCall.bind(this);
-    w.viewReports = this.viewReports.bind(this);
-    w.filterHolidays = this.filterHolidays.bind(this);
-    w.showNotification = this.showNotification.bind(this);
-    w.searchEmployee = this.searchEmployee.bind(this);
-    w.printProfile = this.printProfile.bind(this);
-    w.toggleDarkMode = this.toggleDarkMode.bind(this);
+    window.closeModal = this.closeModal.bind(this);
+    window.downloadProfile = this.downloadProfile.bind(this);
+    window.changeProfileImage = this.changeProfileImage.bind(this);
+    window.viewLeaveDetails = this.viewLeaveDetails.bind(this);
+    window.requestLeave = this.requestLeave.bind(this);
+    window.sendMessage = this.sendMessage.bind(this);
+    window.scheduleCall = this.scheduleCall.bind(this);
+    window.viewReports = this.viewReports.bind(this);
+    window.filterHolidays = this.filterHolidays.bind(this);
+    window.showNotification = this.showNotification.bind(this);
+    window.searchEmployee = this.searchEmployee.bind(this);
+    window.printProfile = this.printProfile.bind(this);
+    window.toggleDarkMode = this.toggleDarkMode.bind(this);
   }
 
   ngAfterViewInit(): void {
@@ -83,13 +110,34 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    
-    if (this.clockInterval) clearInterval(this.clockInterval);
-    if (this.autoSaveTimer) clearTimeout(this.autoSaveTimer);
+
+    if (this.clockInterval) {
+      clearInterval(this.clockInterval);
+      this.clockInterval = undefined;
+    }
+
+    if (this.autoSaveTimer) {
+      clearTimeout(this.autoSaveTimer);
+      this.autoSaveTimer = undefined;
+    }
+
+    delete window.closeModal;
+    delete window.downloadProfile;
+    delete window.changeProfileImage;
+    delete window.viewLeaveDetails;
+    delete window.requestLeave;
+    delete window.sendMessage;
+    delete window.scheduleCall;
+    delete window.viewReports;
+    delete window.filterHolidays;
+    delete window.showNotification;
+    delete window.searchEmployee;
+    delete window.printProfile;
+    delete window.toggleDarkMode;
   }
 
   @HostListener('document:keydown', ['$event'])
-  handleKeydown(e: KeyboardEvent) {
+  handleKeydown(e: KeyboardEvent): void {
     if (e.key === 'Escape') this.closeModal();
     if (e.ctrlKey && e.key.toLowerCase() === 'd') {
       e.preventDefault();
@@ -102,14 +150,13 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (profileData) => {
-          console.log('✅ Profile:', profileData);
           if (profileData) {
             this.employeeData = profileData;
             this.isLoading = false;
           }
         },
         error: (err) => {
-          console.error('❌ Profile error:', err);
+          console.error('Profile error:', err);
           this.hasError = true;
           this.isLoading = false;
         },
@@ -119,7 +166,7 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
   private loadLeaveBalances(): void {
     const userId = this.getCurrentUserId();
     if (!userId) {
-      console.warn('⚠️ No user ID available for loading leave balances');
+      console.warn('No user ID available for loading leave balances');
       return;
     }
 
@@ -127,14 +174,70 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (balances) => {
-          console.log('✅ Balances:', balances);
           this.leaveBalances = balances;
         },
         error: (err) => {
-          console.error('❌ Balances error:', err);
+          console.error('Balances error:', err);
           this.leaveBalances = {};
         },
       });
+  }
+
+  // ✅ Added: Load holidays method
+  private loadHolidays(): void {
+    // Option 1: If you have a getHolidays() method in ApiService
+    // const currentYear = new Date().getFullYear();
+    // this.apiService.getHolidays(currentYear)
+    //   .pipe(takeUntil(this.destroy$))
+    //   .subscribe({
+    //     next: (holidays) => {
+    //       this.holidaysList = holidays;
+    //     },
+    //     error: (err) => {
+    //       console.error('Holidays error:', err);
+    //       this.holidaysList = [];
+    //     },
+    //   });
+
+    // Option 2: Fallback - Use sample data until API is ready
+    this.holidaysList = [
+      {
+        name: 'New Year\'s Day',
+        date: '2025-01-01',
+        type: 'national',
+        description: 'National Holiday'
+      },
+      {
+        name: 'Independence Day',
+        date: '2025-03-20',
+        type: 'national',
+        description: 'National Holiday'
+      },
+      {
+        name: 'Labor Day',
+        date: '2025-05-01',
+        type: 'national',
+        description: 'National Holiday'
+      },
+      {
+        name: 'Republic Day',
+        date: '2025-07-25',
+        type: 'national',
+        description: 'National Holiday'
+      },
+      {
+        name: 'Eid al-Fitr',
+        date: '2025-03-30',
+        type: 'national',
+        description: 'Religious Holiday'
+      },
+      {
+        name: 'Eid al-Adha',
+        date: '2025-06-06',
+        type: 'national',
+        description: 'Religious Holiday'
+      }
+    ];
   }
 
   private getCurrentUserId(): string {
@@ -145,25 +248,25 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     if (!this.employeeData?.dateOfBirth) {
       return null;
     }
-    
+
     const today = new Date();
     const birthDate = new Date(this.employeeData.dateOfBirth);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-    
+
     return Math.max(0, age);
   }
 
   getYearsOfExperience(): number {
-    if (!this.employeeData?.hireDate && !this.employeeData?.hireDate) {
+    if (!this.employeeData?.hireDate) {
       return 0;
     }
 
-    const joinDate = this.employeeData.hireDate || this.employeeData.hireDate;
+    const joinDate = this.employeeData.hireDate;
     const join = new Date(joinDate);
     const today = new Date();
 
@@ -229,8 +332,10 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     input.type = 'file';
     input.accept = 'image/*';
     input.onchange = (e: Event) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
+      const target = e.target as HTMLInputElement;
+      const file = target.files?.[0];
       if (!file) return;
+
       const reader = new FileReader();
       reader.onload = (ev: ProgressEvent<FileReader>) => {
         const img = document.querySelector('.profile-image') as HTMLImageElement;
@@ -263,6 +368,7 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
           <div class="info-value" style="margin-top: 5px;">${percentage}% used</div>
         </div>
       </div>`;
+
     const modal = document.getElementById('leaveModal');
     const contentEl = document.getElementById('leaveModalContent');
     if (modal && contentEl) {
@@ -287,25 +393,21 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     this.showNotification('Loading reports...');
   }
 
-  filterHolidays(
-    filter: 'all' | 'upcoming' | 'optional' | string,
-    ev?: Event
-  ): void {
+  filterHolidays(filter: 'all' | 'upcoming' | 'optional' | string, ev?: Event): void {
     document
       .querySelectorAll('.filter-tab')
       .forEach((tab) => tab.classList.remove('active'));
-    if (ev && ev.target instanceof HTMLElement)
+    if (ev && ev.target instanceof HTMLElement) {
       ev.target.classList.add('active');
+    }
 
-    const holidays = document.querySelectorAll(
-      '.holiday-item'
-    ) as NodeListOf<HTMLElement>;
+    const holidays = document.querySelectorAll('.holiday-item') as NodeListOf<HTMLElement>;
     holidays.forEach((h) => {
-      if (filter === 'all') h.style.display = 'flex';
-      else {
+      if (filter === 'all') {
+        h.style.display = 'flex';
+      } else {
         const category = h.getAttribute('data-category');
-        h.style.display =
-          filter === 'upcoming' || category === filter ? 'flex' : 'none';
+        h.style.display = filter === 'upcoming' || category === filter ? 'flex' : 'none';
       }
     });
   }
@@ -314,6 +416,7 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     const notification = document.getElementById('notification');
     const text = document.getElementById('notificationText');
     if (!notification || !text) return;
+
     text.textContent = message;
     notification.classList.add('show');
     setTimeout(() => notification.classList.remove('show'), 3000);
@@ -321,7 +424,9 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
 
   searchEmployee(): void {
     const term = prompt('Enter employee name or ID:');
-    if (term) this.showNotification(`Searching for: ${term}`);
+    if (term) {
+      this.showNotification(`Searching for: ${term}`);
+    }
   }
 
   printProfile(): void {
@@ -334,12 +439,12 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
   }
 
   setupAutoSave(): void {
-    const inputs = document.querySelectorAll(
-      '.form-input'
-    ) as NodeListOf<HTMLInputElement>;
+    const inputs = document.querySelectorAll('.form-input') as NodeListOf<HTMLInputElement>;
     inputs.forEach((input) => {
       input.addEventListener('input', () => {
-        if (this.autoSaveTimer) clearTimeout(this.autoSaveTimer);
+        if (this.autoSaveTimer) {
+          clearTimeout(this.autoSaveTimer);
+        }
         this.autoSaveTimer = window.setTimeout(() => {
           this.showNotification('Auto-saved changes.');
         }, 2000);
@@ -347,11 +452,11 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  updateClock(): void { }
-  
-  initializeCharts(): void { }
+  updateClock(): void {
+    // Clock update logic if needed
+  }
 
-  private capFirst(s: string): string {
-    return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  initializeCharts(): void {
+    // Chart initialization if needed
   }
 }

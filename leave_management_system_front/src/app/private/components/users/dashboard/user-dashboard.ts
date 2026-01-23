@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';  // ✅ ADDED OnDestroy
-import { Subject, takeUntil } from 'rxjs';  // ✅ ADDED for memory leak fix
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Subject, takeUntil } from 'rxjs';
 import { DashboardData } from '../../../../types/dashboard-data.type';
 import { Activity } from '../../../../types/activity.model';
 import { Performance } from '../../../../types/performance.model';
@@ -16,12 +16,12 @@ import { EmployeeProfile } from '../../../../types/employee-profile.model';
   templateUrl: './user-dashboard.html',
   styleUrls: ['./user-dashboard.css'],
 })
-export class UserDashboard implements OnInit, OnDestroy {  // ✅ ADDED OnDestroy
+export class UserDashboard implements OnInit, OnDestroy {
   dashboardData: DashboardData | null = null;
   isLoading = true;
   hasError = false;
 
-  private destroy$ = new Subject<void>();  // ✅ ADDED for memory leak fix
+  private destroy$ = new Subject<void>();
 
   constructor(
     private http: HttpClient,
@@ -33,21 +33,14 @@ export class UserDashboard implements OnInit, OnDestroy {  // ✅ ADDED OnDestro
     this.loadDashboardData();
   }
 
-  ngOnDestroy(): void {  // ✅ ADDED for memory leak fix
+  ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
   private loadDashboardData(): void {
-    const authToken = localStorage.getItem('authToken');
-    const userData = localStorage.getItem('currentUser');
-    console.log('📱 Dashboard loading - checking auth...');
-    console.log('🔐 Auth token exists:', authToken ? 'Yes' : 'No');
-    console.log('👤 User data exists:', userData ? 'Yes' : 'No');
-    console.log('🔐 Token preview:', authToken ? authToken.substring(0, 50) + '...' : 'NULL');
-
     this.apiService.getDashboardData()
-      .pipe(takeUntil(this.destroy$)) 
+      .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
           this.dashboardData = data;
@@ -60,7 +53,6 @@ export class UserDashboard implements OnInit, OnDestroy {  // ✅ ADDED OnDestro
         },
       });
   }
-  
 
   get employee(): EmployeeProfile | undefined {
     return this.dashboardData?.employeeInfo;
