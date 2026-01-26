@@ -30,6 +30,7 @@ import { LeaveBalancesService } from '../leave-balances/leave-balances.service';
 import { CreateProfileDto } from './types/dtos/create-profile.dto';
 import { UserRole } from '../users/types/enums/user-role.enum';
 import { TeamEntity } from '../teams/entities/team.entity';
+import { UsersService } from '../users/users.service';
 
 interface LeaveBalanceItem {
   total: number;
@@ -63,6 +64,7 @@ export class ProfileController {
   constructor(
     private readonly leaveBalancesService: LeaveBalancesService,
     private readonly profileService: ProfileService,
+    private readonly usersService: UsersService,
   ) {}
 
   private toUserEntity(authenticatedUser: {
@@ -320,13 +322,65 @@ export class ProfileController {
     status: 200,
     description: 'Profile retrieved successfully',
   })
-  getMyProfile(@Req() req: AuthenticatedRequest) {
+  async getMyProfile(@Req() req: AuthenticatedRequest) {
     const user = req.user;
     if (!user || !user.userId) {
       throw new UnauthorizedException('Invalid user token');
     }
 
-    return this.profileService.getProfile(user.userId, this.toUserEntity(user));
+    console.log('🔍 Fetching profile for user:', user.userId);
+
+    try {
+      // ✅ Get user data from database (email, roles, phone)
+      const userData = await this.usersService.getUserById(user.userId);
+
+      // Get profile data (department, position, etc.)
+      const profileData = await this.profileService.getProfile(
+        user.userId,
+        this.toUserEntity(user),
+      );
+
+      console.log('✅ User:', userData.email, 'Roles:', userData.roles);
+
+      // ✅ Combine user data + profile data
+      const combinedProfile = {
+        // User data from database (CRITICAL - provides email, roles, phone)
+        userId: userData.id,
+        email: userData.email,
+        roles: userData.roles,
+        fullname: userData.fullname,
+        phone: userData.phoneNumber || 'Not Set',
+        avatarUrl: userData.profilePictureUrl || null,
+        isActive: userData.isActive,
+
+        // Profile data from employee_profiles table
+        department: profileData?.department || 'Not Set',
+        position: profileData?.designation || 'Not Set',
+        hireDate: profileData?.joinDate || userData.createdAt || null,
+        gender: profileData?.gender || 'Not Set',
+        nationality: profileData?.nationality || 'Not Set',
+        maritalStatus: profileData?.maritalStatus || 'Not Set',
+        emergencyContactPhone: profileData?.emergencyContactPhone || 'Not Set',
+        emergencyContactName: profileData?.emergencyContactName || 'Not Set',
+        address: profileData?.address || 'Not Set',
+
+        // Additional fields
+        employeeId: profileData?.employeeId || `EMP-${userData.id.slice(0, 8)}`,
+        yearsOfService: profileData?.yearsOfService || 0,
+        dateOfBirth: profileData?.dateOfBirth || null,
+      };
+
+      console.log('✅ Combined profile returned');
+
+      return {
+        success: true,
+        data: combinedProfile,
+        message: 'Profile retrieved successfully',
+      };
+    } catch (error) {
+      console.error('❌ Error fetching profile:', error);
+      throw error;
+    }
   }
 
   @Get(':userId')

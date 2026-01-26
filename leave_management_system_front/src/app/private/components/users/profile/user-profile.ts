@@ -151,8 +151,9 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
       .subscribe({
         next: (profileData) => {
           if (profileData) {
-            this.employeeData = profileData;
+            this.employeeData = profileData?.data || profileData;
             this.isLoading = false;
+            console.log("✅ Profile loaded:", this.employeeData);
           }
         },
         error: (err) => {

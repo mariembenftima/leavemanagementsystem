@@ -10,6 +10,7 @@ interface LeaveType {
   label: string;
   maxDays: number;
   color: string;
+  id: number;  // ✅ Added ID field
 }
 
 interface User {
@@ -45,12 +46,13 @@ export class LeaveRequestComponent implements OnInit, OnDestroy {
   minDate = new Date().toISOString().split('T')[0];
 
   leaveTypes: LeaveType[] = [
-    { value: 'annual', label: 'Annual Leave', maxDays: 25, color: '#3b82f6' },
-    { value: 'sick', label: 'Sick Leave', maxDays: 10, color: '#ef4444' },
-    { value: 'maternity', label: 'Maternity Leave', maxDays: 120, color: '#ec4899' },
-    { value: 'paternity', label: 'Paternity Leave', maxDays: 14, color: '#8b5cf6' },
-    { value: 'emergency', label: 'Emergency Leave', maxDays: 5, color: '#f59e0b' },
-    { value: 'bereavement', label: 'Bereavement Leave', maxDays: 3, color: '#6b7280' }
+    { value: 'annual', label: 'Annual Leave', maxDays: 25, color: '#3b82f6', id: 1 },
+    { value: 'sick', label: 'Sick Leave', maxDays: 15, color: '#ef4444', id: 2 },
+    { value: 'personal', label: 'Personal Leave', maxDays: 5, color: '#10b981', id: 3 },
+    { value: 'maternity', label: 'Maternity Leave', maxDays: 90, color: '#ec4899', id: 4 },
+    { value: 'paternity', label: 'Paternity Leave', maxDays: 14, color: '#8b5cf6', id: 5 },
+    { value: 'bereavement', label: 'Bereavement Leave', maxDays: 5, color: '#6b7280', id: 6 },
+    { value: 'emergency', label: 'Emergency Leave', maxDays: 3, color: '#f59e0b', id: 7 }
   ];
 
   upcomingLeaves: UpcomingLeave[] = [
@@ -218,10 +220,23 @@ export class LeaveRequestComponent implements OnInit, OnDestroy {
       this.isSubmitting = true;
 
       try {
+        // ✅ Get selected leave type to extract ID
+        const selectedLeaveType = this.getSelectedLeaveType();
+        
+        if (!selectedLeaveType) {
+          this.toastService.error('Invalid Leave Type', 'Please select a valid leave type.');
+          this.isSubmitting = false;
+          return;
+        }
+
+        // ✅ Calculate total days
+        const totalDays = this.calculateTotalDays();
+
         const payload = {
-          leaveType: this.leaveRequestForm.value.type,        
+          leaveTypeId: selectedLeaveType.id,  // ✅ Send ID instead of name
           startDate: this.leaveRequestForm.value.startDate,      
           endDate: this.leaveRequestForm.value.endDate,
+          totalDays: totalDays,  // ✅ Include calculated days
           reason: this.leaveRequestForm.value.reason,
           emergencyContact: this.leaveRequestForm.value.emergencyContact,
           managerEmail: this.leaveRequestForm.value.managerEmail,

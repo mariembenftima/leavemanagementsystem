@@ -13,6 +13,7 @@ import { LeaveRequest } from '../leave-requests/entities/leave-request.entity';
 import { ProfileController } from './profile.controller';
 
 import { LeaveBalancesModule } from '../leave-balances/leave-balances.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { LeaveBalancesModule } from '../leave-balances/leave-balances.module';
       LeaveRequest,
     ]),
     LeaveBalancesModule,
+    UsersModule,
   ],
   controllers: [ProfileController],
   providers: [ProfileService, LeaveActivityService],

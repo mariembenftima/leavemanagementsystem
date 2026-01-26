@@ -311,9 +311,11 @@ export class ProfileService {
     try {
       const result = await this.leaveRequestRepository
         .createQueryBuilder('lr')
-        .select('COALESCE(SUM(lr.days), 0)', 'totalDays')
-        .where('lr.userId = :userId', { userId })
-        .andWhere('LOWER(lr.leaveType) = LOWER(:leaveType)', { leaveType })
+        .leftJoin('lr.user', 'user')
+        .leftJoin('lr.leaveType', 'lt')
+        .select('COALESCE(SUM(lr.totalDays), 0)', 'totalDays')
+        .where('user.id = :userId', { userId })
+        .andWhere('LOWER(lt.name) = LOWER(:leaveType)', { leaveType })
         .andWhere('lr.status = :status', { status: 'APPROVED' })
         .andWhere('EXTRACT(YEAR FROM lr.startDate) = :year', {
           year: currentYear,

@@ -1,14 +1,56 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Subject, takeUntil } from 'rxjs';
-import { DashboardData } from '../../../../types/dashboard-data.type';
 import { Activity } from '../../../../types/activity.model';
 import { Performance } from '../../../../types/performance.model';
 import { Holiday } from '../../../../types/holiday.model';
 import { DataMapperService } from '../../../../helpers/data-mapper.service';
 import { HttpClient } from '@angular/common/http';
-import { LeaveSummary } from '../../../../types/leave-summary.type';
 import { ApiService } from '../../../services/api.service';
-import { EmployeeProfile } from '../../../../types/employee-profile.model';
+
+interface DashboardResponse {
+  user: {
+    name: string;
+    email: string;
+    role: string;
+    department: string;
+  };
+  employeeInfo: {
+    department: string;
+    designation: string;
+    joinDate: string;
+    employeeId: string;
+    workExperience: string;
+    gender: string;
+  };
+  contactInfo: {
+    email: string;
+    phone: string;
+    emergencyContact: string;
+    address: string;
+  };
+  performance?: {
+    id: number;
+    reviewPeriod: string;
+    rating: string;
+    feedback?: string;
+    updatedAt: string;
+  };
+  leaveBalance: {
+    [key: string]: {
+      total: number;
+      used: number;
+      remaining: number;
+    };
+  };
+  recentActivities: Array<{
+    title: string;
+    description: string;
+    date: string;
+  }>;
+  holidays?: {
+    list: Holiday[];
+  };
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -17,7 +59,7 @@ import { EmployeeProfile } from '../../../../types/employee-profile.model';
   styleUrls: ['./user-dashboard.css'],
 })
 export class UserDashboard implements OnInit, OnDestroy {
-  dashboardData: DashboardData | null = null;
+  dashboardData: DashboardResponse | null = null;
   isLoading = true;
   hasError = false;
 
@@ -42,9 +84,10 @@ export class UserDashboard implements OnInit, OnDestroy {
     this.apiService.getDashboardData()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (data) => {
-          this.dashboardData = data;
+        next: (response: any) => {
+          this.dashboardData = response?.data || response;
           this.isLoading = false;
+          console.log('✅ Dashboard data loaded:', this.dashboardData);
         },
         error: (err) => {
           console.error('Failed to load dashboard data:', err);
@@ -54,23 +97,19 @@ export class UserDashboard implements OnInit, OnDestroy {
       });
   }
 
-  get employee(): EmployeeProfile | undefined {
-    return this.dashboardData?.employeeInfo;
+  get activities(): Array<{title: string, description: string, date: string}> {
+    return this.dashboardData?.recentActivities || [];
   }
 
-  get activities(): Activity[] {
-    return this.dashboardData?.activities || [];
-  }
-
-  get performance(): Performance[] {
-    return this.dashboardData?.performance || [];
+  get performance() {
+    return this.dashboardData?.performance;
   }
 
   get holidays(): Holiday[] {
     return this.dashboardData?.holidays?.list || [];
   }
 
-  get leaveBalance(): Record<string, LeaveSummary> {
+  get leaveBalance(): Record<string, {total: number, used: number, remaining: number}> {
     return this.dashboardData?.leaveBalance || {};
   }
 }

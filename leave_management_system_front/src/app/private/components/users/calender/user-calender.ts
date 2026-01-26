@@ -37,7 +37,7 @@ interface CalendarDay {
   styleUrls: ['./user-calender.css'],
   standalone: false,
 })
-export class UserCalender implements OnInit, OnDestroy {  // ✅ ADDED OnDestroy
+export class UserCalender implements OnInit, OnDestroy {
   currentDate = new Date();
   currentMonth = this.currentDate.getMonth(); // 0-based
   currentYear = this.currentDate.getFullYear();

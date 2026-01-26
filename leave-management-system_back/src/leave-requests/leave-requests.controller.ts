@@ -58,6 +58,7 @@ export class LeaveRequestsController {
     status: 200,
     description: 'Leave requests retrieved successfully',
   })
+  @UseGuards(JwtAuthGuard)
   getMyLeaveRequests(@Request() req: AuthenticatedRequest) {
     return this.leaveRequestsService.getLeaveRequestsByUser(req.user.userId);
   }
@@ -69,6 +70,7 @@ export class LeaveRequestsController {
     status: 201,
     description: 'Leave request created successfully',
   })
+  @UseGuards(JwtAuthGuard)
   createLeaveRequest(
     @Body() dto: CreateLeaveRequestDto,
     @Request() req: AuthenticatedRequest,

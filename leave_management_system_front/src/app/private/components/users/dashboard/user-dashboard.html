@@ -16,7 +16,7 @@
         </div>
       </div>
       <div *ngIf="!isLoading && !hasError && dashboardData">
-        <h2>Welcome, {{ employee?.fullname || 'User' }}!</h2>
+        <h2>Welcome, {{ dashboardData?.user?.name || 'User' }}!</h2>
         <div class="dashboard-section">
           <h3>👤 User Information</h3>
           <div class="user-info-grid">
@@ -24,28 +24,28 @@
               <div class="info-icon">👔</div>
               <div class="info-details">
                 <span class="info-label">Role</span>
-                <span class="info-value">{{ employee?.roles }}</span>
+                <span class="info-value">{{ dashboardData?.user?.role }}</span>
               </div>
             </div>
             <div class="info-item">
               <div class="info-icon">🏢</div>
               <div class="info-details">
                 <span class="info-label">Department</span>
-                <span class="info-value">{{ employee?.department }}</span>
+                <span class="info-value">{{ dashboardData?.employeeInfo?.department }}</span>
               </div>
             </div>
             <div class="info-item">
               <div class="info-icon">📧</div>
               <div class="info-details">
                 <span class="info-label">Email</span>
-                <span class="info-value">{{ employee?.email }}</span>
+                <span class="info-value">{{ dashboardData?.contactInfo?.email }}</span>
               </div>
             </div>
             <div class="info-item">
               <div class="info-icon">📱</div>
               <div class="info-details">
                 <span class="info-label">Phone</span>
-                <span class="info-value">{{ employee?.phone }}</span>
+                <span class="info-value">{{ dashboardData?.contactInfo?.phone }}</span>
               </div>
             </div>
             <div class="info-item">
@@ -53,7 +53,7 @@
               <div class="info-details">
                 <span class="info-label">Join Date</span>
                 <span class="info-value">
-                  {{ employee?.createdAt | date: 'longDate' }}
+                  {{ dashboardData?.employeeInfo?.joinDate | date: 'longDate' }}
                 </span>
               </div>
             </div>
@@ -61,7 +61,7 @@
         </div>
 
         <div class="dashboard-section" *ngIf="leaveBalance | keyvalue as balances">
-          <h3>🏖️ Leave Summary</h3>
+          <h3>🖊️ Leave Summary</h3>
           <table class="leave-table">
             <thead>
               <tr>
@@ -74,9 +74,9 @@
             <tbody>
               <tr *ngFor="let item of balances">
                 <td class="text-capitalize">{{ item.key }}</td>
-                <td>{{ item.value.totalDays }}</td>
-                <td>{{ item.value.usedDays }}</td>
-                <td>{{ item.value.remainingDays }}</td>
+                <td>{{ item.value.total }}</td>
+                <td>{{ item.value.used }}</td>
+                <td>{{ item.value.remaining }}</td>
               </tr>
             </tbody>
           </table>
@@ -86,23 +86,21 @@
           <h3>🎉 Upcoming Holidays</h3>
           <ul class="holiday-list">
             <li *ngFor="let h of holidays">
-              <strong>{{ h.name }}</strong> — {{ h.date | date: 'longDate' }}
+              <strong>{{ h.name }}</strong> – {{ h.date | date: 'longDate' }}
             </li>
           </ul>
         </div>
 
-        <div class="dashboard-section" *ngIf="performance.length > 0">
+        <div class="dashboard-section" *ngIf="performance">
           <h3>📈 Performance Reviews</h3>
           <div class="performance-grid">
-            <div class="performance-card" *ngFor="let p of performance">
-              <h4>Review Period: {{ p.reviewPeriod }}</h4>
-              <p><strong>Rating:</strong> {{ p.rating }}/5</p>
-              <p><strong>Goals:</strong> {{ p.goals }}</p>
-              <p><strong>Achievements:</strong> {{ p.achievements }}</p>
-              <p><strong>Feedback:</strong> {{ p.feedback }}</p>
+            <div class="performance-card">
+              <h4>Review Period: {{ dashboardData?.performance?.reviewPeriod }}</h4>
+              <p><strong>Rating:</strong> {{ dashboardData?.performance?.rating }}/5</p>
+              <p><strong>Feedback:</strong> {{ dashboardData?.performance?.feedback || 'No feedback yet' }}</p>
               <p class="timestamp">
                 <i class="fas fa-calendar-alt"></i>
-                Last updated: {{ p.updatedAt | date: 'medium' }}
+                Last updated: {{ dashboardData?.performance?.updatedAt | date: 'medium' }}
               </p>
             </div>
           </div>
@@ -112,7 +110,8 @@
           <h3>🕒 Recent Activities</h3>
           <ul class="activity-list">
             <li *ngFor="let a of activities">
-              {{ a.description }} ({{ a.createdAt | date: 'short' }})
+              <strong>{{ a.title }}</strong>: {{ a.description }} 
+              <span class="activity-date">({{ a.date }})</span>
             </li>
           </ul>
         </div>

@@ -1,4 +1,5 @@
 export interface Activity {
+[x: string]: any;
   id: number;
   userId: string;
   activityType: string;          // LOGIN, LEAVE_REQUEST, etc.

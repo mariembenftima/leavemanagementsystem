@@ -23,13 +23,9 @@ export class Holiday {
     default: HolidayType.COMPANY,
   })
   type: HolidayType;
-
-  @Column({ default: false })
+  @Column({ name: 'is_optional' })
   isOptional: boolean;
 
-  @Column({ type: 'text', nullable: true })
-  description: string;
-
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
