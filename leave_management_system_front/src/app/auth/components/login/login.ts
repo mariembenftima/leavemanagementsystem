@@ -11,7 +11,7 @@ interface LoginCredentials {
 
 interface User {
   username: string;
-  role: string;
+  role: string[];
   lastLogin?: Date;
 }
 
@@ -25,7 +25,7 @@ export class login implements OnInit, OnDestroy {
   loginForm!: FormGroup;
 
   constructor(
-    private fb: FormBuilder, 
+    private fb: FormBuilder,
     private router: Router,
     private authService: AuthService
   ) {
@@ -52,7 +52,7 @@ export class login implements OnInit, OnDestroy {
     }
   }
 
-  
+
   private initializeForm(): void {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -61,7 +61,7 @@ export class login implements OnInit, OnDestroy {
     });
   }
 
-  
+
   onSubmit(): void {
     if (this.loginForm.invalid) {
       this.markFormGroupTouched();
@@ -77,7 +77,7 @@ export class login implements OnInit, OnDestroy {
     this.attemptLogin(formValues);
   }
 
-  
+
   private async attemptLogin(
     credentials: LoginCredentials & { rememberMe: boolean }
   ): Promise<void> {
@@ -89,46 +89,91 @@ export class login implements OnInit, OnDestroy {
         email: credentials.email,
         password: credentials.password
       };
-      console.log('Attempting login with:', loginRequest);
+      console.log('🔐 Attempting login with:', loginRequest.email);
 
       const response = await firstValueFrom(this.authService.login(loginRequest));
-      console.log('response data in component:', response);
-      if (response && response.data.success) {
-        console.log('Login response in login component:', response);
-        const apiUser: any = response.data.user || {};
-        const apiRoles = apiUser.roles as string | string[] | undefined;
-        const rolesArray = Array.isArray(apiRoles)
-          ? apiRoles
-          : typeof apiRoles === 'string' && apiRoles.length
-          ? apiRoles.split(',').map((r) => r.trim())
-          : [];
+      console.log('📥 Full API response:', response);
 
+      if (response && response.data?.success) {
+        // ✅ Step 1: Extract JWT token from response
+        const token = response.data.access_token;
+
+        if (!token) {
+          console.error('❌ No token in response!');
+          throw new Error('Authentication token not received');
+        }
+
+        // ✅ Step 2: Extract user data from response
+        const apiUser = response.data.user || {};
+        console.log('👤 User data from API:', apiUser);
+
+        // ✅ Step 3: Store JWT token (CRITICAL!)
+        localStorage.setItem('authToken', token);
+        console.log('✅ Token saved to localStorage');
+
+        // ✅ Step 4: Store complete user data with ALL roles
+        const userData = {
+          id: apiUser.id,
+          email: apiUser.email,
+          username: apiUser.firstName || apiUser.email,
+          fullname: apiUser.fullname || apiUser.firstName,
+          firstName: apiUser.firstName,
+          lastName: apiUser.lastName,
+          roles: Array.isArray(apiUser.roles) ? apiUser.roles : [apiUser.roles || 'EMPLOYEE'],  // ✅ Store ALL roles as array
+          phoneNumber: apiUser.phone,
+          profilePictureUrl: apiUser.avatarUrl,
+          isActive: apiUser.isActive,
+          lastLogin: new Date().toISOString(),
+        };
+
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+        console.log('✅ User data saved:', userData);
+        console.log('✅ User roles:', userData.roles);
+
+        // ✅ Step 5: Update component state
         this.currentUser = {
-          username: apiUser.email || apiUser.username || '',
-          role: rolesArray[0] || 'EMPLOYEE',
+          username: userData.username,
+          role: userData.roles,  // ✅ Full roles array (for access control)
           lastLogin: new Date(),
         };
-        console.log('successfully logged in user:', this.currentUser);
-        
+
         if (credentials.rememberMe) {
-          this.saveUserSession(this.currentUser);
+          // Save remember me preference
+          localStorage.setItem('rememberMe', 'true');
         }
 
         this.showSuccessPopup = true;
-        console.log('Login successful:', this.currentUser);
+        console.log('✅ Login successful! Roles:', userData.roles);
+
+        // ✅ Step 6: Navigate based on role
+        setTimeout(() => {
+          if (userData.roles.includes('ADMIN') || userData.roles.includes('HR')) {
+            console.log('🚀 Redirecting to admin dashboard');
+            this.router.navigate(['/admin/dashboard']);
+          } else if (userData.roles.includes('MANAGER')) {
+            console.log('🚀 Redirecting to manager dashboard');
+            this.router.navigate(['/manager/dashboard']);
+          } else {
+            console.log('🚀 Redirecting to user dashboard');
+            this.router.navigate(['/dashboard']);
+          }
+        }, 1500);
+
       } else {
-        this.showError( 'Invalid email or password. Please try again.');
+        console.error('❌ Login failed - invalid response');
+        this.showError('Invalid email or password. Please try again.');
         this.shakeLoginCard();
       }
     } catch (error: any) {
+      console.error('❌ Login error:', error);
       const errorMessage = error?.error?.message || 'Invalid email or password. Please try again.';
       this.showError(errorMessage);
       this.shakeLoginCard();
-      console.error('Login error:', error);
     } finally {
       this.isLoading = false;
     }
   }
+
 
 
   togglePassword(): void {
@@ -142,7 +187,7 @@ export class login implements OnInit, OnDestroy {
     alert('Please contact your system administrator to reset your password.');
   }
 
- 
+
   closePopup(): void {
     this.showSuccessPopup = false;
     this.redirectToDashboard();
@@ -161,10 +206,10 @@ export class login implements OnInit, OnDestroy {
     } else {
       this.router.navigate(['/dashboard'], { state: { user: this.currentUser } });
     }
-    
+
   }
 
-  
+
   private showError(message: string): void {
     this.errorMessage = message;
     this.showErrorToast = true;
@@ -175,7 +220,7 @@ export class login implements OnInit, OnDestroy {
     }, 5000);
   }
 
- 
+
   dismissError(): void {
     this.showErrorToast = false;
     this.errorMessage = '';
@@ -186,7 +231,7 @@ export class login implements OnInit, OnDestroy {
     }
   }
 
-  
+
   private markFormGroupTouched(): void {
     Object.keys(this.loginForm.controls).forEach((key) => {
       const control = this.loginForm.get(key);
@@ -207,7 +252,7 @@ export class login implements OnInit, OnDestroy {
     }
   }
 
- 
+
   private saveUserSession(user: User): void {
     try {
       const sessionData = {
@@ -221,7 +266,7 @@ export class login implements OnInit, OnDestroy {
     }
   }
 
- 
+
   private clearUserSession(): void {
     try {
       localStorage.removeItem('hrms_session');
@@ -230,7 +275,7 @@ export class login implements OnInit, OnDestroy {
     }
   }
 
- 
+
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
@@ -281,7 +326,7 @@ export class login implements OnInit, OnDestroy {
     return errors;
   }
 
-  
+
   getCurrentTime(): string {
     return new Date().toLocaleString('en-US', {
       year: 'numeric',
