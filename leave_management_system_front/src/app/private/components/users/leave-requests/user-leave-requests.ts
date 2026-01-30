@@ -1,18 +1,15 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';  // ✅ ADDED OnDestroy
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Subject, takeUntil } from 'rxjs';  // ✅ ADDED for memory leak fix
+import { Subject, takeUntil } from 'rxjs';
 import { ToastService } from '../../../../shared/services/toast.service';
 import { ApiService } from '../../../services/api.service';
 import { EmployeeProfile } from '../../../../types/employee-profile.model';
 
-interface LeaveType {
-  value: string;
-  label: string;
-  maxDays: number;
-  color: string;
-  id: number;  // ✅ Added ID field
-}
+import { HttpClient } from '@angular/common/http';  // ✅ Add HttpClient
+import { environment } from '../../../../../environments/environment'; 
+import { LeaveType } from '../../../types/user/leaveRequestsType/leave-type.model';
 
+// Keep component-specific interfaces
 interface User {
   fullname: string;
   username: string;
@@ -45,15 +42,9 @@ export class LeaveRequestComponent implements OnInit, OnDestroy {
 
   minDate = new Date().toISOString().split('T')[0];
 
-  leaveTypes: LeaveType[] = [
-    { value: 'annual', label: 'Annual Leave', maxDays: 25, color: '#3b82f6', id: 1 },
-    { value: 'sick', label: 'Sick Leave', maxDays: 15, color: '#ef4444', id: 2 },
-    { value: 'personal', label: 'Personal Leave', maxDays: 5, color: '#10b981', id: 3 },
-    { value: 'maternity', label: 'Maternity Leave', maxDays: 90, color: '#ec4899', id: 4 },
-    { value: 'paternity', label: 'Paternity Leave', maxDays: 14, color: '#8b5cf6', id: 5 },
-    { value: 'bereavement', label: 'Bereavement Leave', maxDays: 5, color: '#6b7280', id: 6 },
-    { value: 'emergency', label: 'Emergency Leave', maxDays: 3, color: '#f59e0b', id: 7 }
-  ];
+  // ✅ Will be loaded from database
+  leaveTypes: LeaveType[] = [];
+  isLoadingLeaveTypes = false;
 
   upcomingLeaves: UpcomingLeave[] = [
     { title: 'Summer Vacation', startDate: '2025-08-15', endDate: '2025-08-25' },
@@ -63,12 +54,14 @@ export class LeaveRequestComponent implements OnInit, OnDestroy {
   constructor(
     private formBuilder: FormBuilder,
     private toastService: ToastService,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private http: HttpClient  // ✅ Inject HttpClient directly
   ) {
     this.leaveRequestForm = this.createForm();
   }
 
   ngOnInit(): void {
+    this.loadLeaveTypes();
     this.loadCurrentEmployee();
     this.setupFormValidation();
   }
@@ -76,6 +69,92 @@ export class LeaveRequestComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void { 
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  private async loadLeaveTypes(): Promise<void> {
+  this.isLoadingLeaveTypes = true;
+
+  try {
+    console.log('🔍 Loading leave types - BYPASSING DataMapper...');
+    
+    const apiUrl = environment.apiUrl || 'http://localhost:3001';
+    const rawResponse = await this.http.get<any>(`${apiUrl}/leave-types`).toPromise();
+    
+    console.log('📦 RAW HTTP RESPONSE:', rawResponse);
+    
+    // Extract data array
+    const leaveTypesData = rawResponse?.data || rawResponse || [];
+    
+    console.log('📦 Data length:', leaveTypesData.length);
+    console.log('📦 First item:', leaveTypesData[0]);
+    
+    // ✅ Check ALL properties including non-enumerable ones
+    console.log('🔑 Enumerable keys:', Object.keys(leaveTypesData[0]));
+    console.log('🔑 ALL property names:', Object.getOwnPropertyNames(leaveTypesData[0]));
+    
+    // ✅ Try to access each property individually
+    const firstItem = leaveTypesData[0];
+    const allProps = Object.getOwnPropertyNames(firstItem);
+    
+    console.log('🔍 Testing property access:');
+    allProps.forEach(prop => {
+      const value = firstItem[prop];
+      console.log(`  ${prop}: ${value} (type: ${typeof value})`);
+    });
+    
+    if (leaveTypesData && leaveTypesData.length > 0) {
+      // ✅ Map by copying ALL properties from non-enumerable to plain object
+      this.leaveTypes = leaveTypesData.map((item: any) => {
+        // Get all property names (including non-enumerable)
+        const propertyNames = Object.getOwnPropertyNames(item);
+        
+        // Create plain object with all properties
+        const plainObject: any = {};
+        propertyNames.forEach(propName => {
+          plainObject[propName] = item[propName];
+        });
+        
+        console.log('✅ Plain object:', plainObject);
+        console.log('✅ Plain object id:', plainObject.id);
+        console.log('✅ Plain object name:', plainObject.name);
+        
+        return {
+          id: plainObject.id,
+          name: plainObject.name,
+          maxDays: plainObject.maxDays || plainObject.max_days || 0,
+          color: this.getColorForLeaveType(plainObject.name || ''),
+          slug: (plainObject.name || 'unknown').toLowerCase().replace(/\s+/g, '-')
+        };
+      }).filter((type: { name: any; }) => type.name);
+
+      console.log('✅ Successfully loaded leave types:', this.leaveTypes.length);
+      console.log('📋 Final leave types:', this.leaveTypes);
+    }
+  } catch (err) {
+    console.error('❌ Failed to load leave types:', err);
+    this.toastService.error('Error', 'Failed to load leave types.');
+    this.leaveTypes = [];
+  } finally {
+    this.isLoadingLeaveTypes = false;
+  }
+}
+
+  /**
+   * Get color for leave type based on name
+   */
+  private getColorForLeaveType(name: string): string {
+    const colorMap: Record<string, string> = {
+      'Annual Leave': '#3b82f6',
+      'Sick Leave': '#ef4444',
+      'Personal Leave': '#10b981',
+      'Maternity Leave': '#ec4899',
+      'Paternity Leave': '#8b5cf6',
+      'Bereavement Leave': '#6b7280',
+      'Emergency Leave': '#f59e0b',
+      'Study Leave': '#84cc16',
+      'Unpaid Leave': '#94a3b8'
+    };
+    return colorMap[name] || '#6b7280';
   }
 
   private async loadCurrentEmployee(): Promise<void> {
@@ -99,8 +178,6 @@ export class LeaveRequestComponent implements OnInit, OnDestroy {
       this.isLoadingUser = false;
     }
   }
-
-
 
   private createForm(): FormGroup {
     return this.formBuilder.group({
@@ -179,9 +256,18 @@ export class LeaveRequestComponent implements OnInit, OnDestroy {
   }
 
   getSelectedLeaveType(): LeaveType | undefined {
-    const selectedValue = this.leaveRequestForm.get('type')?.value;
-    return this.leaveTypes.find(type => type.value === selectedValue);
-  }
+  const selectedValue = this.leaveRequestForm.get('type')?.value;
+  
+  // ✅ Convertir en nombre pour la comparaison
+  const selectedId = parseInt(selectedValue, 10);
+  
+  console.log('🔍 Selected value:', selectedValue, 'Type:', typeof selectedValue);
+  console.log('🔍 Converted to:', selectedId, 'Type:', typeof selectedId);
+  console.log('🔍 Available leave types:', this.leaveTypes);
+  console.log('🔍 Found leave type:', this.leaveTypes.find(type => type.id === selectedId));
+  
+  return this.leaveTypes.find(type => type.id === selectedId);
+}
 
   calculateTotalDays(): number {
     const startDate = this.leaveRequestForm.get('startDate')?.value;
@@ -220,7 +306,6 @@ export class LeaveRequestComponent implements OnInit, OnDestroy {
       this.isSubmitting = true;
 
       try {
-        // ✅ Get selected leave type to extract ID
         const selectedLeaveType = this.getSelectedLeaveType();
         
         if (!selectedLeaveType) {
@@ -229,14 +314,13 @@ export class LeaveRequestComponent implements OnInit, OnDestroy {
           return;
         }
 
-        // ✅ Calculate total days
         const totalDays = this.calculateTotalDays();
 
         const payload = {
-          leaveTypeId: selectedLeaveType.id,  // ✅ Send ID instead of name
+          leaveTypeId: selectedLeaveType.id,
           startDate: this.leaveRequestForm.value.startDate,      
           endDate: this.leaveRequestForm.value.endDate,
-          totalDays: totalDays,  // ✅ Include calculated days
+          totalDays: totalDays,
           reason: this.leaveRequestForm.value.reason,
           emergencyContact: this.leaveRequestForm.value.emergencyContact,
           managerEmail: this.leaveRequestForm.value.managerEmail,
@@ -349,6 +433,7 @@ export class LeaveRequestComponent implements OnInit, OnDestroy {
       this.handleFiles(files);
     }
   }
+  
 
   private handleFiles(files: FileList): void {
     const fileArray = Array.from(files);
@@ -364,7 +449,7 @@ export class LeaveRequestComponent implements OnInit, OnDestroy {
       }
 
       if (!isValidSize) {
-        console.warn(`File ${file.name} exceeds size limit`);
+        console.warn(`File ${file.name} has exceeds size limit`);
         return false;
       }
 

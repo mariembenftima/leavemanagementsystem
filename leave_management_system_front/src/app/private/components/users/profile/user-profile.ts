@@ -15,7 +15,6 @@ import { DataMapperService } from '../../../../helpers/data-mapper.service';
 import { ApiService } from '../../../services/api.service';
 import { EmployeeProfile } from '../../../../types/employee-profile.model';
 
-// ✅ Holiday interface for type safety
 interface Holiday {
   id?: string;
   name: string;
@@ -78,7 +77,7 @@ export class UserProfile implements OnInit, AfterViewInit, OnDestroy {
 
     this.loadEmployeeProfile();
     this.loadLeaveBalances();
-    this.loadHolidays();  // ✅ Load holidays
+    this.loadHolidays();
 
     window.closeModal = this.closeModal.bind(this);
     window.downloadProfile = this.downloadProfile.bind(this);

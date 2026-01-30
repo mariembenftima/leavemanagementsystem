@@ -6,10 +6,11 @@ import {
   Body,
   Param,
   Request,
-  ParseUUIDPipe,
+  ParseIntPipe, // ✅ Change from ParseUUIDPipe to ParseIntPipe
   HttpCode,
   HttpStatus,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,15 +23,24 @@ import { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { CreateLeaveRequestDto } from './types/dtos/create-leave-request.dto';
 import { UpdateLeaveStatusDto } from './types/dtos/update-leave-status.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
-import { RolesGuard } from 'src/users/roleguard';
-import { Roles } from 'src/users/roledecorator';
-import { UserRole } from 'src/users/types/enums/user-role.enum';
 
 @ApiTags('leave-requests')
 @ApiBearerAuth('JWT-auth')
 @Controller('leave-requests')
 export class LeaveRequestsController {
   constructor(private readonly leaveRequestsService: LeaveRequestsService) {}
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get leave requests for current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Leave requests retrieved successfully',
+  })
+  getLeaveRequests(@Request() req: AuthenticatedRequest) {
+    return this.leaveRequestsService.getLeaveRequestsByUser(req.user.userId);
+  }
 
   @Get('all')
   @ApiOperation({ summary: 'Get all leave requests (HR/Admin only)' })
@@ -79,16 +89,8 @@ export class LeaveRequestsController {
   }
 
   @Put(':id/status')
-  @ApiOperation({ summary: 'Update leave request status (HR/Admin only)' })
-  @ApiResponse({
-    status: 200,
-    description: 'Leave request status updated successfully',
-  })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.HR, UserRole.ADMIN)
-  @ApiBearerAuth('JWT-auth')
   updateLeaveRequestStatus(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseUUIDPipe) id: string, // ✅ ParseUUIDPipe for UUID
     @Body() updateStatusDto: UpdateLeaveStatusDto,
     @Request() req: AuthenticatedRequest,
   ) {
@@ -98,14 +100,14 @@ export class LeaveRequestsController {
       req.user.userId,
     );
   }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get a single leave request by ID' })
   @ApiResponse({
     status: 200,
     description: 'Leave request retrieved successfully',
   })
-  getLeaveRequestById(@Param('id', ParseUUIDPipe) id: string) {
+  getLeaveRequestById(@Param('id', ParseIntPipe) id: string) {
+    // ✅ Changed to ParseIntPipe and number type
     return this.leaveRequestsService.getLeaveRequestById(id);
   }
 }

@@ -44,12 +44,29 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="type" class="form-label required">Leave Type</label>
-                <select id="type" formControlName="type" class="form-select" [class.error]="isFieldInvalid('type')">
+                
+                <!-- ✅ Loading indicator while fetching leave types -->
+                <div *ngIf="isLoadingLeaveTypes" class="loading-select">
+                  <p>Loading leave types...</p>
+                </div>
+                
+                <!-- ✅ Leave type dropdown - uses ID and name from database -->
+                <select 
+                  *ngIf="!isLoadingLeaveTypes"
+                  id="type" 
+                  formControlName="type" 
+                  class="form-select" 
+                  [class.error]="isFieldInvalid('type')"
+                >
                   <option value="" disabled>Select leave type</option>
-                  <option *ngFor="let leaveType of leaveTypes" [value]="leaveType.value">
-                    {{ leaveType.label }}
+                  <option 
+                    *ngFor="let leaveType of leaveTypes" 
+                    [value]="leaveType.id"
+                  >
+                    {{ leaveType.name }} ({{ leaveType.maxDays }} days max)
                   </option>
                 </select>
+                
                 <div *ngIf="getFieldError('type')" class="error-message">
                   {{ getFieldError('type') }}
                 </div>
@@ -114,23 +131,30 @@
             </div>
           </div>
 
+          <!-- ✅ Enhanced Leave Summary Section -->
           <div class="form-section" *ngIf="getSelectedLeaveType() && calculateTotalDays() > 0">
             <h3 class="section-title">Leave Summary</h3>
             <div class="leave-summary slide-in">
               <div class="summary-grid">
                 <div class="summary-item">
                   <p class="summary-label">Leave Type</p>
-                  <p class="summary-value">{{ getSelectedLeaveType()?.label }}</p>
+                  <p class="summary-value">{{ getSelectedLeaveType()?.name }}</p>
                 </div>
                 <div class="summary-item">
-                  <p class="summary-label">Total Days</p>
-                  <p class="summary-value">{{ calculateTotalDays() }}</p>
+                  <p class="summary-label">Total Days Requested</p>
+                  <p class="summary-value">{{ calculateTotalDays() }} / {{ getSelectedLeaveType()?.maxDays }} days</p>
                 </div>
                 <div class="summary-item">
                   <p class="summary-label">Date Range</p>
-                  <p class="summary-value">{{ formatDateRange(leaveRequestForm.get('startDate')?.value,
-                    leaveRequestForm.get('endDate')?.value) }}</p>
+                  <p class="summary-value">
+                    {{ formatDateRange(leaveRequestForm.get('startDate')?.value, leaveRequestForm.get('endDate')?.value) }}
+                  </p>
                 </div>
+              </div>
+              
+              <!-- ✅ Color indicator based on leave type -->
+              <div class="leave-type-indicator" [style.background-color]="getSelectedLeaveType()?.color">
+                <span class="indicator-text">{{ getSelectedLeaveType()?.name }}</span>
               </div>
             </div>
           </div>
@@ -179,7 +203,7 @@
             <button type="button" class="btn btn-secondary" (click)="onCancel()">
               Cancel
             </button>
-            <button type="submit" class="btn btn-primary" [disabled]="isSubmitting" [class.loading]="isSubmitting">
+            <button type="submit" class="btn btn-primary" [disabled]="isSubmitting || isLoadingLeaveTypes" [class.loading]="isSubmitting">
               <span *ngIf="!isSubmitting">Submit Request</span>
               <span *ngIf="isSubmitting">Submitting...</span>
             </button>

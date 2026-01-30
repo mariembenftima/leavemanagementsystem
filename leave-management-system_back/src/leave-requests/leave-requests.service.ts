@@ -18,7 +18,7 @@ export class LeaveRequestsService {
     private userRepository: Repository<User>,
     private emailNotificationService: EmailNotificationService,
     @InjectRepository(LeaveTypeEntity)
-    private leaveTypeRepository: Repository<any>,
+    private leaveTypeRepository: Repository<LeaveTypeEntity>,
   ) {}
 
   async createLeaveRequest(
@@ -28,14 +28,15 @@ export class LeaveRequestsService {
     // Find the leave type by name or ID
     const leaveType: LeaveTypeEntity | null =
       await this.leaveTypeRepository.findOne({
-        where: { name: dto.leaveType },
+        where: { id: dto.leaveTypeId },
       });
 
     if (!leaveType) {
-      throw new BadRequestException(`Leave type '${dto.leaveType}' not found`);
+      throw new BadRequestException(
+        `Leave type with ID '${dto.leaveTypeId}' not found`,
+      );
     }
 
-    // Create the entity instance
     const leaveRequest: LeaveRequest = this.leaveRequestRepository.create({
       user: { id: userId },
       leaveType,
@@ -43,23 +44,22 @@ export class LeaveRequestsService {
       endDate: new Date(dto.endDate),
       reason: dto.reason,
       is_half_day: !!dto.isHalfDay,
-      totalDays: dto.totalDays,
+      daysRequested: dto.totalDays,
       status: LeaveRequestStatus.PENDING,
     });
 
-    // Save to DB
     const saved: LeaveRequest =
       await this.leaveRequestRepository.save(leaveRequest);
     return saved;
   }
 
   async updateLeaveRequestStatus(
-    id: string,
+    id: string, // ✅ Keep as string (UUID)
     status: LeaveRequestStatus,
     userId: string,
   ): Promise<LeaveRequest> {
     const leaveRequest = await this.leaveRequestRepository.findOne({
-      where: { id: +id },
+      where: { id }, // ✅ Use UUID string directly
       relations: ['user', 'leaveType'],
     });
 
@@ -78,6 +78,19 @@ export class LeaveRequestsService {
     return updatedLeaveRequest;
   }
 
+  // Add this method if missing
+  async getLeaveRequestById(id: string): Promise<LeaveRequest> {
+    const leaveRequest = await this.leaveRequestRepository.findOne({
+      where: { id },
+      relations: ['user', 'leaveType'],
+    });
+
+    if (!leaveRequest) {
+      throw new Error('Leave request not found');
+    }
+
+    return leaveRequest;
+  }
   async getLeaveRequestsByUser(userId: string): Promise<LeaveRequest[]> {
     return this.leaveRequestRepository.find({
       where: { user: { id: userId } },
@@ -90,7 +103,6 @@ export class LeaveRequestsService {
     try {
       console.log('🔍 Fetching all leave requests...');
 
-      // Try query builder approach (more reliable)
       const leaveRequests = await this.leaveRequestRepository
         .createQueryBuilder('lr')
         .leftJoinAndSelect('lr.user', 'user')
@@ -105,7 +117,6 @@ export class LeaveRequestsService {
       console.error('Error message:', error.message);
       console.error('Error name:', error.name);
 
-      // Try without relations as fallback
       console.log('⚠️ Trying without relations...');
       const basicRequests = await this.leaveRequestRepository.find({
         order: { createdAt: 'DESC' },

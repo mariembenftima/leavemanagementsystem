@@ -13,8 +13,8 @@ import { LeaveRequestStatus } from '../types/enums/leave-request-status.enum';
 
 @Entity('leave_requests')
 export class LeaveRequest {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
   @ManyToOne(() => User, { eager: false })
   @JoinColumn({ name: 'user_id' })
@@ -61,6 +61,7 @@ export class LeaveRequest {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
   @Column({
     name: 'manager_email',
     type: 'varchar',
@@ -76,6 +77,7 @@ export class LeaveRequest {
     nullable: true,
   })
   emergencyContact?: string;
+
   @Column({
     name: 'days_requested',
     type: 'int',

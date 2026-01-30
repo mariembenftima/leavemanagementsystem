@@ -1,6 +1,13 @@
 export interface LeaveType {
-  id: string;
-  name: string;
-  max_days: number;
-  color?: string;
+  id: number;            
+  name: string;       
+  maxDays: number;         
+  color: string;       
+  slug?: string;           
+}
+
+export interface LeaveTypeDao {
+  id: number;            
+  name: string;            
+  maxDays: number;        
 }

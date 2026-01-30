@@ -32,6 +32,8 @@ import { DeleteConfirmModalComponent } from './private/components/admin/users/us
 import { RoleModalComponent } from './private/components/admin/users/users/modals/role-modal/role-modal.component';
 import { CommonModule } from '@angular/common';
 import { ADMIN_ROUTES } from './private/components/admin/admin.route';
+import { AdminLeaveRequestsComponent } from './private/components/admin/leave-requests/admin-leave-requests.component';
+import { AdminHolidaysComponent } from './private/components/admin/holidays/admin-holidays.component';
 
 
 @NgModule({
@@ -54,7 +56,10 @@ import { ADMIN_ROUTES } from './private/components/admin/admin.route';
     RoleModalComponent,
     DeleteConfirmModalComponent,
     CreateProfileModalComponent,
-    UsersComponent
+    UsersComponent,
+    AdminLeaveRequestsComponent,
+    AdminHolidaysComponent
+    
   ],
   imports: [
     RouterModule,

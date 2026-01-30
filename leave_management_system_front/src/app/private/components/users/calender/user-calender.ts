@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';  
 import { Router } from '@angular/router';
-import { Subject, takeUntil, lastValueFrom } from 'rxjs'; 
+import { Subject, lastValueFrom } from 'rxjs'; 
 import { ApiService, LeaveRequest } from '../../../services/api.service';
 import { AuthService } from '../../../services/auth.service';
 import { Holiday } from '../../../../types/holiday.model';
@@ -92,68 +92,84 @@ export class UserCalender implements OnInit, OnDestroy {
 
   private async loadCalendarData(): Promise<void> {
     try {
-      const [events, holidays, leaves] = await Promise.all([
-        lastValueFrom(this.apiService.getCalendarEvents(this.currentMonth + 1, this.currentYear)),
-        lastValueFrom(this.apiService.getHolidays(this.currentYear)),
-        lastValueFrom(this.apiService.getLeaveRequests())
+      console.log('🔍 Loading calendar data for:', this.currentMonth + 1, this.currentYear);
+
+      // ✅ Fetch all leave requests and holidays from database
+      const [allLeaveRequests, holidays] = await Promise.all([
+        lastValueFrom(this.apiService.getAllLeaveRequests()),  // ✅ Get ALL leave requests
+        lastValueFrom(this.apiService.getHolidays(this.currentYear))
       ]);
 
-      this.events = this.processCalendarEvents(events);
-      this.holidays = holidays;
-      this.myLeaveRequests = leaves;
+      console.log('✅ Loaded leave requests:', allLeaveRequests.length);
+      console.log('✅ Loaded holidays:', holidays.length);
 
+      // ✅ Clear events array
+      this.events = [];
+      this.holidays = holidays;
+      this.myLeaveRequests = allLeaveRequests;
+
+      // ✅ Add holidays to calendar
       this.addHolidaysToCalendar(holidays);
-      this.addLeaveRequestsToCalendar(leaves);
+
+      // ✅ Add all leave requests to calendar (ALL, not just current user)
+      this.addAllLeaveRequestsToCalendar(allLeaveRequests);
+
+      console.log('✅ Total calendar events:', this.events.length);
+
     } catch (err) {
-      console.error('Failed to fetch calendar data:', err);
+      console.error('❌ Failed to fetch calendar data:', err);
     }
   }
 
-
-  private processCalendarEvents(apiEvents: any[]): CalendarEvent[] {
-    return apiEvents.map(event => ({
-      id: event.id,
-      title: event.title || `${event.user?.firstName ?? ''} ${event.user?.lastName ?? ''}`,
-      type: this.mapLeaveTypeToCalendarType(event.leaveType?.name || event.type),
-      startDate: new Date(event.startDate),
-      endDate: new Date(event.endDate),
-      color: this.getLeaveTypeColor(event.leaveType?.name || event.type),
-    }));
-  }
-
   private addHolidaysToCalendar(holidays: any[]): void {
+    console.log('📅 Adding holidays to calendar:', holidays.length);
+    
     holidays.forEach(holiday => {
       const date = new Date(holiday.date);
-      if (this.isInCurrentMonth(date)) {
-        this.events.push({
-          id: `holiday-${holiday.id}`,
-          title: holiday.name,
-          type: 'autres',
-          startDate: date,
-          endDate: date,
-          color: '#ef4444',
-        });
-      }
+      console.log('  Holiday:', holiday.name, 'Date:', date, 'Current month:', this.currentMonth);
+      
+      // ✅ FIX: Don't filter by month - show ALL holidays
+      this.events.push({
+        id: `holiday-${holiday.id}`,
+        title: holiday.name,
+        type: 'autres',
+        startDate: date,
+        endDate: date,
+        color: '#ef4444',
+      });
     });
+    
+    console.log('✅ Holidays added:', this.events.filter(e => e.id.startsWith('holiday-')).length);
   }
 
-  private addLeaveRequestsToCalendar(leaveRequests: any[]): void {
-    leaveRequests
-      .filter(req => req.status === 'approved')
-      .forEach(req => {
-        const start = new Date(req.startDate);
-        const end = new Date(req.endDate);
-        if (this.isDateRangeInCurrentMonth(start, end)) {
-          this.events.push({
-            id: `leave-${req.id}`,
-            title: `My ${req.leaveType?.name || 'Leave'}`,
-            type: this.mapLeaveTypeToCalendarType(req.leaveType?.name),
-            startDate: start,
-            endDate: end,
-            color: this.getLeaveTypeColor(req.leaveType?.name),
-          });
-        }
+  private addAllLeaveRequestsToCalendar(leaveRequests: any[]): void {
+    console.log('📝 Adding leave requests to calendar:', leaveRequests.length);
+    
+    leaveRequests.forEach((req, index) => {
+      const start = new Date(req.startDate);
+      const end = new Date(req.endDate);
+      
+      console.log(`  Request ${index + 1}:`, {
+        user: req.user?.fullname,
+        type: req.leaveType?.name,
+        start: start,
+        end: end,
+        status: req.status
       });
+      
+      const userName = req.user?.fullname || `${req.user?.firstName || ''} ${req.user?.lastName || ''}`.trim() || 'Unknown';
+      
+      this.events.push({
+        id: `leave-${req.id}`,
+        title: `${userName} - ${req.leaveType?.name || 'Leave'} (${req.status})`,
+        type: this.mapLeaveTypeToCalendarType(req.leaveType?.name),
+        startDate: start,
+        endDate: end,
+        color: this.getLeaveTypeColor(req.leaveType?.name),
+      });
+    });
+    
+    console.log('✅ Leave requests added:', this.events.filter(e => e.id.startsWith('leave-')).length);
   }
 
   private mapLeaveTypeToCalendarType(
@@ -188,6 +204,9 @@ export class UserCalender implements OnInit, OnDestroy {
   }
 
   generateCalendar(): void {
+    console.log('🗓️ Generating calendar for:', this.currentMonth + 1, this.currentYear);
+    console.log('📊 Total events to display:', this.events.length);
+    
     const firstDay = new Date(this.currentYear, this.currentMonth, 1);
     const start = new Date(firstDay);
     start.setDate(start.getDate() - firstDay.getDay());
@@ -198,7 +217,14 @@ export class UserCalender implements OnInit, OnDestroy {
       const date = new Date(start);
       date.setDate(start.getDate() + i);
 
-      const eventsForDay = this.events.filter(e => date >= e.startDate && date <= e.endDate);
+      // ✅ FIX: Normalize dates for comparison (remove time component)
+      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      
+      const eventsForDay = this.events.filter(e => {
+        const eventStart = new Date(e.startDate.getFullYear(), e.startDate.getMonth(), e.startDate.getDate());
+        const eventEnd = new Date(e.endDate.getFullYear(), e.endDate.getMonth(), e.endDate.getDate());
+        return dateOnly >= eventStart && dateOnly <= eventEnd;
+      });
 
       this.calendarDays.push({
         date,
@@ -208,6 +234,9 @@ export class UserCalender implements OnInit, OnDestroy {
         events: eventsForDay,
       });
     }
+    
+    const daysWithEvents = this.calendarDays.filter(d => d.events.length > 0).length;
+    console.log('✅ Calendar generated:', this.calendarDays.length, 'days,', daysWithEvents, 'days with events');
   }
 
   previousMonth(): void {

@@ -43,11 +43,9 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new ResponseInterceptor());
   app.useGlobalInterceptors(
-    new ClassSerializerInterceptor(app.get(Reflector), {
-      excludeExtraneousValues: true,
-      enableImplicitConversion: true,
-    }),
+    new ClassSerializerInterceptor(app.get(Reflector)), // ✅ Simplified - removed restrictive options
   );
+
   const config = new DocumentBuilder()
     .setTitle('leave management system')
     .setDescription('The leave management system API description')

@@ -28,14 +28,20 @@
           <div class="header-filters">
             <select class="filter-select" (change)="onDepartmentChange($event)">
               <option value="">Vue calendrier</option>
+              <option value="all">Tous</option>
               <option value="hr">HR</option>
               <option value="it">IT</option>
+              <option value="marketing">Marketing</option>
+              <option value="finance">Finance</option>
             </select>
 
             <select class="filter-select" (change)="onDepartmentChange($event)">
               <option value="">Département</option>
+              <option value="all">Tous</option>
               <option value="hr">HR</option>
               <option value="it">IT</option>
+              <option value="marketing">Marketing</option>
+              <option value="finance">Finance</option>
             </select>
 
             <select class="filter-select" (change)="onMonthChange($event)">
@@ -46,6 +52,12 @@
               <option value="4">Avril</option>
               <option value="5">Mai</option>
               <option value="6">Juin</option>
+              <option value="7">Juillet</option>
+              <option value="8">Août</option>
+              <option value="9">Septembre</option>
+              <option value="10">Octobre</option>
+              <option value="11">Novembre</option>
+              <option value="12">Décembre</option>
             </select>
           </div>
         </div>
@@ -54,23 +66,23 @@
       <div class="calendar-content">
         <div class="calendar-navigation">
           <div class="nav-controls">
-            <button class="nav-button" (click)="previousMonth()" title="Previous Month">
+            <button class="nav-button" (click)="previousMonth()" title="Mois précédent">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="15,18 9,12 15,6"></polyline>
               </svg>
             </button>
             
-            <button class="today-button" (click)="goToToday()" title="Go to Today">
+            <button class="today-button" (click)="goToToday()" title="Aller à aujourd'hui">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="16" y1="2" x2="16" y2="6"></line>
                 <line x1="8" y1="2" x2="8" y2="6"></line>
                 <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>
-              Today
+              Aujourd'hui
             </button>
             
-            <button class="nav-button" (click)="nextMonth()" title="Next Month">
+            <button class="nav-button" (click)="nextMonth()" title="Mois suivant">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="9,18 15,12 9,6"></polyline>
               </svg>
@@ -79,7 +91,7 @@
 
           <h2 class="calendar-month-year">{{ getCurrentMonthYear() }}</h2>
           
-          <button class="refresh-button" (click)="refreshCalendar()" title="Refresh Calendar" [disabled]="isLoading">
+          <button class="refresh-button" (click)="refreshCalendar()" title="Actualiser le calendrier" [disabled]="isLoading">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [class.spinning]="isLoading">
               <polyline points="23,4 23,10 17,10"></polyline>
               <polyline points="1,20 1,14 7,14"></polyline>
@@ -88,14 +100,42 @@
           </button>
         </div>
 
-        <div class="calendar-legend">
-          <div class="legend-item" *ngFor="let type of leaveTypes">
-            <div class="legend-dot" [style.background-color]="type.color"></div>
-            <span class="legend-label">{{ type.name }}</span>
+        <!-- Loading indicator -->
+        <div *ngIf="isLoading" class="loading-indicator">
+          <div class="spinner"></div>
+          <p>Chargement du calendrier...</p>
+        </div>
+
+        <!-- Calendar legend -->
+        <div class="calendar-legend" *ngIf="!isLoading">
+          <div class="legend-item">
+            <div class="legend-dot" style="background-color: #3b82f6"></div>
+            <span class="legend-label">Congé annuel</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background-color: #ef4444"></div>
+            <span class="legend-label">Congé maladie</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background-color: #10b981"></div>
+            <span class="legend-label">Congé personnel</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background-color: #8b5cf6"></div>
+            <span class="legend-label">Congé maternité</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background-color: #f59e0b"></div>
+            <span class="legend-label">Congé d'urgence</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background-color: #ef4444; border: 2px solid #991b1b;"></div>
+            <span class="legend-label">Jour férié</span>
           </div>
         </div>
 
-        <div class="calendar-grid">
+        <!-- Calendar grid -->
+        <div class="calendar-grid" *ngIf="!isLoading">
           <div class="calendar-header-row">
             <div class="day-header" *ngFor="let day of days">{{ day }}</div>
           </div>
@@ -118,11 +158,14 @@
               </div>
 
               <div class="day-events">
+                <!-- Show first 3 events -->
                 <div
-                  *ngFor="let event of day.events; let i = index"
+                  *ngFor="let event of day.events.slice(0, 3); let i = index"
                   class="event-item"
                   [class.event-item-range]="event.startDate.getTime() !== event.endDate.getTime()"
                   [style.background-color]="event.color"
+                  [style.opacity]="event.id.startsWith('holiday-') ? '0.9' : '0.8'"
+                  [style.border-left]="event.id.startsWith('holiday-') ? '3px solid #991b1b' : 'none'"
                   [style.border-top-left-radius]="
                     day.date.getTime() === event.startDate.getTime() ? '6px' : '0'
                   "
@@ -135,23 +178,38 @@
                   [style.border-bottom-right-radius]="
                     day.date.getTime() === event.endDate.getTime() ? '6px' : '0'
                   "
-                  [title]="event.title + ' (' + event.type + ')'"
+                  [title]="event.title"
                   (click)="onEventClick(event); $event.stopPropagation()"
                 >
+                  <!-- Show full title on start date -->
                   <span class="event-title" *ngIf="day.date.getTime() === event.startDate.getTime()">
                     {{ event.title }}
                   </span>
-                  <span class="event-type" *ngIf="day.date.getTime() !== event.startDate.getTime()">
-                    {{ event.type }}
+                  <!-- Show continuation bar on other dates -->
+                  <span class="event-continuation" *ngIf="day.date.getTime() !== event.startDate.getTime()">
+                    ···
                   </span>
                 </div>
                 
-                <div class="more-events" *ngIf="day.events.length > 2">
-                  +{{ day.events.length - 2 }} more
+                <!-- Show "more" indicator if more than 3 events -->
+                <div class="more-events" *ngIf="day.events.length > 3" 
+                     [title]="'Total: ' + day.events.length + ' événements'">
+                  +{{ day.events.length - 3 }} plus
                 </div>
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Empty state -->
+        <div class="empty-state" *ngIf="!isLoading && calendarDays.length === 0">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          <p>Aucun événement ce mois-ci</p>
         </div>
       </div>
     </div>

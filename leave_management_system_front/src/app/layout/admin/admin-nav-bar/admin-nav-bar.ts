@@ -24,7 +24,7 @@ interface SettingsItem {
 
 @Component({
   selector: 'app-admin-nav-bar',
-  standalone: false,  // ✅ Changed to false
+  standalone: false,
   templateUrl: './admin-nav-bar.html',
   styleUrls: ['./admin-nav-bar.css'],
 })
@@ -32,7 +32,8 @@ export class AdminNavBar {
   navItems: NavItem[] = [
     { label: 'Dashboard', route: '/admin/dashboard' },
     { label: 'User Management', route: '/admin/users' },
-    { label: 'Leave Management', route: '/admin/leaves' },
+    { label: 'Leave Management', route: '/admin/leave-requests' },
+    { label: 'Holidays', route: '/admin/holidays' },
     { label: 'Reports', route: '/admin/reports' },
     { label: 'System Settings', route: '/admin/settings' },
   ];

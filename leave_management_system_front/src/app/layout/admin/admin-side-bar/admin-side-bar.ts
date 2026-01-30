@@ -18,7 +18,7 @@ export class AdminSideBar implements OnInit {
   menuItems: MenuItem[] = [
     { icon: '📊', label: 'Dashboard', route: '/admin/dashboard' },
     { icon: '👥', label: 'Users', route: '/admin/users' },
-    { icon: '📝', label: 'Leave Requests', route: '/admin/leaves' },
+    { icon: '📝', label: 'Leave Requests', route: '/admin/leave-requests' },
     { icon: '🗓️', label: 'Holidays', route: '/admin/holidays' },
     { icon: '📋', label: 'Leave Types', route: '/admin/leave-types' },
     { icon: '📊', label: 'Reports', route: '/admin/reports' },

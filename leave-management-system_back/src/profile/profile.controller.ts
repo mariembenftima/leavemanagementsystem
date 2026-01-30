@@ -419,7 +419,11 @@ export class ProfileController {
   ) {
     const requester = req.user;
 
-    if (!requester || !requester.roles.includes(UserRole.HR)) {
+    if (
+      !requester ||
+      (!requester.roles.includes(UserRole.ADMIN) &&
+        !requester.roles.includes(UserRole.MANAGER))
+    ) {
       throw new UnauthorizedException('Only HR can create profiles');
     }
 

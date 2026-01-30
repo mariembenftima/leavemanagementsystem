@@ -11,6 +11,7 @@ import { DashboardData } from '../../types/dashboard-data.type';
 import { Team } from '../../types/team.model';
 import { User } from '../../types/user.model';
 import { LeaveBalance } from '../../types/leave-balance.model';
+import { LeaveType } from '../types/user/leaveRequestsType/leave-type.model';
 
 interface LeaveRequest {
   id: string;
@@ -33,13 +34,6 @@ interface LeaveRequest {
   };
 }
 
-interface LeaveType {
-  id: number;
-  name: string;
-  description?: string;
-  maxDays?: number;
-  requiresApproval?: boolean;
-}
 
 
 interface AdminDashboardData {

@@ -5,13 +5,14 @@ import {
   IsOptional,
   IsString,
   IsInt,
+  IsPositive,
 } from 'class-validator';
 
 export class CreateLeaveRequestDto {
   @ApiProperty({ description: 'Leave type name or ID', example: 'annual' })
-  @IsString()
-  leaveType!: string;
-
+  @IsInt()
+  @IsPositive()
+  leaveTypeId!: number;
   @ApiProperty({
     description: 'Start date',
     example: '2025-01-15',

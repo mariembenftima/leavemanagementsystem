@@ -51,6 +51,7 @@ export interface UpdateUserDto {
 })
 export class UsersService {
   private apiUrl = `${environment.apiUrl}/users`;
+  private apiUrl1 = `${environment.apiUrl}/profile`;
 
   constructor(private http: HttpClient) {}
 
@@ -114,7 +115,7 @@ export class UsersService {
     return this.http.post(`${this.apiUrl}/${id}/profile-pic`, formData);
   }
   createEmployeeProfile(userId: string, data: CreateEmployeeProfileDto): Observable<any> {
-    return this.http.post<any>(`${this.apiUrl}/${userId}/employee-profile`, data);
+    return this.http.post<any>(`${this.apiUrl1}/${userId}/employee-profile`, data);
   }
 
   getEmployeeProfile(userId: string): Observable<any> {

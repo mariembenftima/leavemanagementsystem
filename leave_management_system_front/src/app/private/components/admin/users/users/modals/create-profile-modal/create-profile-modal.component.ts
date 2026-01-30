@@ -55,8 +55,8 @@ export class CreateProfileModalComponent {
   };
 
   // Dropdown options
-  genderOptions = ['Male', 'Female', 'Other', 'Prefer not to say'];
-  maritalStatusOptions = ['Single', 'Married', 'Divorced', 'Widowed'];
+  genderOptions = ['MALE', 'FEMALE', 'OTHER'];
+  maritalStatusOptions = ['SINGLE', 'MARRIED', 'DIVORCED', 'WIDOWED'];
 
   constructor(private usersService: UsersService) {}
 

@@ -1,0 +1,407 @@
+<div class="app-container">
+    <app-admin-nav-bar></app-admin-nav-bar>
+
+    <div class="main-content leave-requests-main">
+        <app-admin-side-bar></app-admin-side-bar>
+
+        <div class="leave-requests-content">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1>📋 Leave Request Management</h1>
+                <p class="page-subtitle">Review, approve, or reject employee leave requests</p>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #e3f2fd;">📊</div>
+                    <div class="stat-info">
+                        <h3>{{ statistics.totalRequests }}</h3>
+                        <p>Total Requests</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #fff3e0;">⏳</div>
+                    <div class="stat-info">
+                        <h3>{{ statistics.pendingCount }}</h3>
+                        <p>Pending Review</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #e8f5e8;">✅</div>
+                    <div class="stat-info">
+                        <h3>{{ statistics.approvedCount }}</h3>
+                        <p>Approved</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #ffebee;">❌</div>
+                    <div class="stat-info">
+                        <h3>{{ statistics.rejectedCount }}</h3>
+                        <p>Rejected</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <div class="status-filters">
+                    <button *ngFor="let filter of statusFilters" class="status-filter-btn"
+                        [class.active]="activeStatusFilter === filter.value" [style.--filter-color]="filter.color"
+                        (click)="onStatusFilterChange(filter.value)">
+                        <span class="filter-label">{{ filter.label }}</span>
+                        <span class="filter-count">{{ filter.count }}</span>
+                    </button>
+                </div>
+
+                <div class="advanced-filters">
+                    <div class="filter-row">
+                        <div class="filter-item">
+                            <label class="filter-label">
+                                <i class="bi bi-calendar"></i>
+                                Start Date
+                            </label>
+                            <input type="date" [(ngModel)]="startDateFilter" (ngModelChange)="onDateFilterChange()"
+                                class="form-input" />
+                        </div>
+
+                        <div class="filter-item">
+                            <label class="filter-label">
+                                <i class="bi bi-calendar-check"></i>
+                                End Date
+                            </label>
+                            <input type="date" [(ngModel)]="endDateFilter" (ngModelChange)="onDateFilterChange()"
+                                class="form-input" />
+                        </div>
+
+                        <div class="filter-item filter-actions">
+                            <button class="btn-clear-filters" (click)="clearFilters()">
+                                <i class="bi bi-x-circle"></i>
+                                Clear Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div *ngIf="loading" class="loading-container">
+                <div class="spinner"></div>
+                <p>Loading leave requests...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div *ngIf="!loading && leaveRequests.length === 0" class="empty-state">
+                <div class="empty-icon">📋</div>
+                <h3>No leave requests found</h3>
+                <p>Try adjusting your filters or check back later for new requests</p>
+            </div>
+
+            <!-- Requests Table -->
+            <div *ngIf="!loading && leaveRequests.length > 0" class="table-section">
+                <div class="section-header">
+                    <h2>
+                        <i class="bi bi-list-check"></i>
+                        Leave Requests
+                    </h2>
+                    <span class="result-count">{{ pagination.total }} requests found</span>
+                </div>
+
+                <div class="requests-table-wrapper">
+                    <table class="requests-table">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Leave Type</th>
+                                <th>Dates</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th>Submitted</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let request of leaveRequests" class="request-row">
+                                <!-- Employee -->
+                                <td>
+                                    <div class="employee-info">
+                                        <div class="employee-avatar">
+                                            <img *ngIf="request.user && request.user.profilePictureUrl"
+                                                [src]="request.user.profilePictureUrl" [alt]="request.user.fullname" />
+                                            <div *ngIf="!request.user || !request.user.profilePictureUrl"
+                                                class="avatar-placeholder">
+                                                {{ (request.user && request.user.fullname ?
+                                                request.user.fullname.charAt(0) : 'U') }}
+                                            </div>
+                                        </div>
+                                        <div class="employee-details">
+                                            <div class="employee-name">{{ request.user?.fullname || 'Unknown' }}</div>
+                                            <div class="employee-email">{{ request.user?.email || 'N/A' }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Leave Type -->
+                                <td>
+                                    <span class="leave-type-badge">
+                                        {{ request.leaveType?.name || 'N/A' }}
+                                    </span>
+                                </td>
+
+                                <!-- Dates -->
+                                <td>
+                                    <div class="date-range">
+                                        <div class="date-item">
+                                            <i class="bi bi-calendar-event"></i>
+                                            {{ formatDate(request.startDate) }}
+                                        </div>
+                                        <div class="date-separator">→</div>
+                                        <div class="date-item">
+                                            <i class="bi bi-calendar-check"></i>
+                                            {{ formatDate(request.endDate) }}
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Duration -->
+                                <td>
+                                    <span class="duration-badge">
+                                        {{ request.daysRequested || request.totalDays || 0 }} {{ (request.daysRequested
+                                        || request.totalDays) === 1 ? 'day' : 'days' }}
+                                    </span>
+                                </td>
+
+                                <!-- Status -->
+                                <td>
+                                    <span class="status-badge" [ngClass]="getStatusClass(request.status)">
+                                        <span class="status-icon">{{ getStatusIcon(request.status) }}</span>
+                                        {{ request.status }}
+                                    </span>
+                                </td>
+
+                                <!-- Submitted Date -->
+                                <td>
+                                    <div class="submitted-date">
+                                        {{ formatDate(request.createdAt) }}
+                                    </div>
+                                </td>
+
+                                <!-- Actions -->
+                                <td class="text-end">
+                                    <div class="action-buttons">
+                                        <button class="btn-action btn-view" (click)="openDetailsModal(request)"
+                                            title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+
+                                        <button *ngIf="request.status === 'PENDING'" class="btn-action btn-approve"
+                                            (click)="openApproveModal(request)" title="Approve">
+                                            <i class="bi bi-check-circle"></i>
+                                        </button>
+
+                                        <button *ngIf="request.status === 'PENDING'" class="btn-action btn-reject"
+                                            (click)="openRejectModal(request)" title="Reject">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+
+                                        <button *ngIf="request.status === 'APPROVED' || request.status === 'PENDING'"
+                                            class="btn-action btn-cancel" (click)="cancelRequest(request)"
+                                            title="Cancel">
+                                            <i class="bi bi-slash-circle"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination-section" *ngIf="pagination.totalPages > 1">
+                    <div class="pagination-info">
+                        Showing {{ (pagination.page - 1) * pagination.limit + 1 }} to
+                        {{ Math.min(pagination.page * pagination.limit, pagination.total) }} of
+                        {{ pagination.total }} requests
+                    </div>
+
+                    <div class="pagination-controls">
+                        <button class="pagination-btn" [disabled]="pagination.page === 1"
+                            (click)="onPageChange(pagination.page - 1)">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+
+                        <button *ngFor="let page of getPaginationPages()" class="pagination-btn"
+                            [class.active]="page === pagination.page" [disabled]="page === -1"
+                            (click)="page !== -1 && onPageChange(page)">
+                            {{ page === -1 ? '...' : page }}
+                        </button>
+
+                        <button class="pagination-btn" [disabled]="pagination.page === pagination.totalPages"
+                            (click)="onPageChange(pagination.page + 1)">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approve Modal -->
+<div class="modal-overlay" *ngIf="showApproveModal" (click)="closeModals()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+            <h3>✅ Approve Leave Request</h3>
+            <button class="modal-close" (click)="closeModals()">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <div class="request-summary" *ngIf="selectedRequest">
+                <p><strong>Employee:</strong> {{ selectedRequest.user?.fullname || 'Unknown' }}</p>
+                <p><strong>Leave Type:</strong> {{ selectedRequest.leaveType?.name || 'N/A' }}</p>
+                <p><strong>Duration:</strong> {{ selectedRequest.totalDays || 0 }} days</p>
+                <p>
+                    <strong>Dates:</strong> {{ formatDate(selectedRequest.startDate) }} - {{
+                    formatDate(selectedRequest.endDate) }}
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label>Comments (Optional)</label>
+                <textarea [(ngModel)]="approvalComments" class="form-textarea" rows="4"
+                    placeholder="Add any comments about this approval..."></textarea>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" (click)="closeModals()">Cancel</button>
+            <button class="btn-success" (click)="confirmApprove()" [disabled]="loading">
+                {{ loading ? 'Approving...' : 'Approve Request' }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal-overlay" *ngIf="showRejectModal" (click)="closeModals()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+            <h3>❌ Reject Leave Request</h3>
+            <button class="modal-close" (click)="closeModals()">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <div class="request-summary" *ngIf="selectedRequest">
+                <p><strong>Employee:</strong> {{ selectedRequest.user?.fullname || 'Unknown' }}</p>
+                <p><strong>Leave Type:</strong> {{ selectedRequest.leaveType?.name || 'N/A' }}</p>
+                <p><strong>Duration:</strong> {{ selectedRequest.totalDays || 0 }} days</p>
+            </div>
+
+            <div class="form-group">
+                <label>Rejection Reason <span class="required">*</span></label>
+                <textarea [(ngModel)]="rejectionReason" class="form-textarea" rows="4"
+                    placeholder="Please provide a reason for rejecting this request (minimum 10 characters)..."
+                    required></textarea>
+                <small class="form-hint">Minimum 10 characters required</small>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" (click)="closeModals()">Cancel</button>
+            <button class="btn-danger" (click)="confirmReject()" [disabled]="loading || rejectionReason.length < 10">
+                {{ loading ? 'Rejecting...' : 'Reject Request' }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Details Modal -->
+<div class="modal-overlay" *ngIf="showDetailsModal" (click)="closeModals()">
+    <div class="modal-content modal-large" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+            <h3>📋 Leave Request Details</h3>
+            <button class="modal-close" (click)="closeModals()">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+
+        <div class="modal-body" *ngIf="selectedRequest">
+            <div class="details-grid">
+                <div class="detail-item">
+                    <label>Employee</label>
+                    <p>{{ selectedRequest.user?.fullname || 'Unknown' }}</p>
+                </div>
+
+                <div class="detail-item">
+                    <label>Email</label>
+                    <p>{{ selectedRequest.user?.email || 'N/A' }}</p>
+                </div>
+
+                <div class="detail-item">
+                    <label>Leave Type</label>
+                    <p>{{ selectedRequest.leaveType?.name || 'N/A' }}</p>
+                </div>
+
+                <div class="detail-item">
+                    <label>Status</label>
+                    <p>
+                        <span class="status-badge" [ngClass]="getStatusClass(selectedRequest.status)">
+                            {{ selectedRequest.status }}
+                        </span>
+                    </p>
+                </div>
+
+                <div class="detail-item">
+                    <label>Start Date</label>
+                    <p>{{ formatDate(selectedRequest.startDate) }}</p>
+                </div>
+
+                <div class="detail-item">
+                    <label>End Date</label>
+                    <p>{{ formatDate(selectedRequest.endDate) }}</p>
+                </div>
+
+                <div class="detail-item">
+                    <label>Total Days</label>
+                    <p>{{ selectedRequest.totalDays || 0 }} days</p>
+                </div>
+
+                <div class="detail-item">
+                    <label>Submitted On</label>
+                    <p>{{ formatDate(selectedRequest.createdAt) }}</p>
+                </div>
+
+                <div class="detail-item full-width" *ngIf="selectedRequest.reason">
+                    <label>Reason</label>
+                    <p>{{ selectedRequest.reason }}</p>
+                </div>
+
+                <div class="detail-item full-width" *ngIf="selectedRequest.rejectedReason">
+                    <label>Rejection/Comments</label>
+                    <p>{{ selectedRequest.rejectedReason }}</p>
+                </div>
+
+                <div class="detail-item" *ngIf="selectedRequest.approvedBy">
+                    <label>Approved/Rejected By</label>
+                    <p>{{ selectedRequest.approvedBy }}</p>
+                </div>
+
+                <div class="detail-item" *ngIf="selectedRequest.approvedAt">
+                    <label>Action Date</label>
+                    <p>{{ formatDate(selectedRequest.approvedAt) }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" (click)="closeModals()">Close</button>
+        </div>
+    </div>
+</div>

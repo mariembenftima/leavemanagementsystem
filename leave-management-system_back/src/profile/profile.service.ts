@@ -43,7 +43,10 @@ export class ProfileService {
     createProfileDto: CreateProfileDto,
     createdBy: User,
   ) {
-    if (!createdBy.roles?.includes(UserRole.HR)) {
+    if (
+      !createdBy.roles?.includes(UserRole.MANAGER) &&
+      !createdBy.roles?.includes(UserRole.ADMIN)
+    ) {
       throw new ForbiddenException('Only HR can create employee profiles');
     }
 

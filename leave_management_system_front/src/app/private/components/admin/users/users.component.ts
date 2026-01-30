@@ -26,8 +26,8 @@ export class UsersComponent implements OnInit, OnDestroy {
   pagination: PaginationData = {
     total: 0,
     page: 1,
-    limit: 10,
-    totalPages: 0
+    limit: 30,
+    totalPages: 3
   };
 
   searchQuery = '';
@@ -88,7 +88,7 @@ export class UsersComponent implements OnInit, OnDestroy {
             this.pagination = {
               total: this.users.length,
               page: 1,
-              limit: 10,
+              limit: 20,
               totalPages: Math.ceil(this.users.length / 10)
             };
           }

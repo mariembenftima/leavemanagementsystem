@@ -19,6 +19,8 @@ import { HttpModule } from '@nestjs/axios';
 import { AppService } from './app.service';
 import { AppController } from './app.controller';
 import { AdminModule } from './admin/admin.module';
+import { AdminLeaveRequestsModule } from './admin-leave-requests/admin-leave-requests.module';
+import { AdminHolidaysModule } from './admin-holidays/admin-holidays.module';
 
 @Module({
   imports: [
@@ -60,6 +62,8 @@ import { AdminModule } from './admin/admin.module';
     TerminusModule,
     HttpModule,
     AdminModule,
+    AdminLeaveRequestsModule,
+    AdminHolidaysModule,
   ],
   controllers: [AppController],
   providers: [
